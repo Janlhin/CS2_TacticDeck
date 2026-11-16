@@ -3,7 +3,7 @@
 **本地优先的 CS2 多 POV 战术复盘工作台。**
 左侧 N 路 POV 视频、中间 2D 战术画布（轨迹 · 道具 · 手绘标注）、底部回合与 tick 双时间轴——三者由同一个 tick 时钟焊在一起，点谁看谁。素材不出本机，断网可用。
 
-当前版本 `0.1.0`（初始开发阶段，公共 API 不稳定）。仓库当前只有文档与校验链，**尚无可运行代码**。
+当前版本 `0.1.0`（初始开发阶段，公共 API 不稳定）。**已落地可运行骨架**：React 19 + PixiJS 8 的前端、Tauri 2 + Rust 的后端壳，`npm run app:dev` 可起窗口；demo 解析与播放尚未接入。
 
 ## 它解决什么
 
@@ -32,20 +32,24 @@ G1–G4 的命令属于规划中的二进制，当前尚未存在（见「已知
 
 | 项 | 选型 | 版本 | 版本载体 |
 |---|---|---|---|
-| 语言（后端） | Rust | 1.99.1（`edition 2024`） | `Cargo.toml` + `rust-toolchain.toml` |
-| 语言（前端） | TypeScript（`strict` 全开） | 随 Tauri 模板 | `tsconfig.json` |
-| 桌面壳 | Tauri | v2（主版本 2） | `src-tauri/tauri.conf.json` |
-| 2D 渲染 | PixiJS | v8 | `package.json` |
-| 3D 渲染（M2） | Three.js | 计划 | `package.json` |
-| 标注 | Konva | 计划 | `package.json` |
+| 语言（后端） | Rust | 1.99.1（`edition 2024`） | `src-tauri/Cargo.toml` |
+| 语言（前端） | TypeScript（`strict` 全开） | 7.0.2 | `package.json` + `tsconfig.json` |
+| 桌面壳 | Tauri | 2.12.5（stable；3.x 仍在 alpha） | `src-tauri/Cargo.toml` + `src-tauri/tauri.conf.json` |
+| 前端框架 | React | 19.3.1 | `package.json` |
+| 构建器 | Vite | 8.3.8 | `package.json` + `vite.config.ts` |
+| 状态层 | Zustand | 5.1.0 | `package.json` |
+| 2D 渲染 | PixiJS | 8.23.0 | `package.json` |
+| 样式 | Sass（SCSS） | 1.108.2 | `package.json` |
+| 3D 渲染（M2） | Three.js | 未引入（M2 接入） | 计划 |
+| 标注层（S3） | Konva | 未引入（S3 接入） | 计划 |
 | 包管理器 | npm | 10.9.8 | `package-lock.json` |
 | Node 运行时 | Node.js | 22.23.2 | `.nvmrc` |
-| 脚本运行时 | PowerShell | 7.6.4（要求 ≥ 7.4） | `scripts/verify.ps1` 的 `#requires` |
-| demo 解析（主） | `source2-demo` crate | 0.5.11 | `Cargo.toml` |
-| demo 解析（备） | `@laihoe/demoparser2` | 待引入 | `package.json` |
+| 脚本运行时 | PowerShell | 7.6.4（要求 ≥ 7.4） | `scripts/*.ps1` 的 `#requires` |
+| demo 解析（主） | `source2-demo` crate | 0.5.11（S0 引入） | 计划 |
+| demo 解析（备） | `@laihoe/demoparser2` | 未引入（S0 兜底） | 计划 |
 | 视频编码 | FFmpeg（仅 nvenc / amf / mf + aac） | 随抓屏器 | 运行时探测 |
 
-版本策略：**求受支持且可复现，不求最新**。运行时 EOL 即升级；主版本升级必须独立提案并单独提交。
+版本策略：**取最新稳定版，预发布不纳入基线**（见 [DECISIONS.md](DECISIONS.md) D-010）。主版本升级必须独立提案并单独提交；未真正接入的依赖不提前装进 `package.json`，避免技术栈登记失真。
 
 ## 目录结构
 
@@ -63,8 +67,9 @@ G1–G4 的命令属于规划中的二进制，当前尚未存在（见「已知
 | `config/` | 工具配置：Markdown 校验、链接检查、提交信息规则 |
 | `.github/` | CI：每次推送与 PR 运行 `verify` |
 | `.husky/` | 提交门禁薄壳（仅转发到 `scripts/hooks/*.ps1`） |
-| `crates/` | Rust 侧：解析、录制编排、同步算法（按需建立） |
-| `apps/` | 前端与 Tauri 壳（按需建立） |
+| `crates/` | Rust 侧共享库：解析、录制编排、同步算法（S0 起按需建立） |
+| `src/` | 前端源码：`App.tsx`、`components/`、`store/`、`styles.scss` |
+| `src-tauri/` | Tauri 2 壳：`src/lib.rs` 命令层、`tauri.conf.json`、`capabilities/` |
 
 ## 安装与运行
 
@@ -82,11 +87,14 @@ npm ci
 npm run verify
 ```
 
-`npm run verify` 是**唯一验收入口**：它串起文档结构、字段、链接、根目录白名单、脚本基线，以及存在 `Cargo.toml` 时的格式、Clippy 与测试。它失败就不得提交，禁止绕过。
+`npm run verify` 是**唯一验收入口**：它串起文档结构、字段、链接、根目录白名单、脚本基线，以及 `src-tauri/Cargo.toml` 存在时的 `cargo fmt` / `clippy` / `test`。它失败就不得提交，禁止绕过。
+
+起窗口：`npm run app:dev`（需要 WebView2 运行时，Win10/11 默认自带）；只调前端样式可先跑 `npm run dev` 在浏览器里看。打包：`npm run app:build`（当前 `bundle.active` 为 `false`，只产出可执行文件，不做安装包）。
 
 ## 已知限制
 
-- **当前无代码**：仓库处于文档与门禁阶段。上表的 G1–G4 命令是待实现的契约，`cargo` 相关步骤在无 `Cargo.toml` 时由 `verify` 跳过并打印 `SKIP`。
+- **只到骨架**：窗口、布局、五路槽位状态层、Pixi 网格可跑；demo 解析、播放、同步、录制均未接入。下表 G1–G4 的命令是待实现的契约，不是现状。
+- **盘面是占位**：`RadarCanvas` 只画网格，等地图校准（`pos_x` / `pos_y` / `scale` / `rotate`）接入后替换。
 - **平台**：只支持 Windows x64（抓屏依赖 DXGI）。
 - **录制依赖外部工具**：HLAE 官方声明其为"技术意义上的 hack"，仅可用于看 demo 与制作视频。本项目只在离线 demo 模式调用，**绝不接入受 VAC 保护的服务器**。
 - **图形局限**：只支持 SDR；不支持旋转屏；独占全屏可能抓不到；多实例需自行加锁。
@@ -105,6 +113,7 @@ npm run verify
 
 | 阶段 | 内容 | 交付物 | 状态 |
 |---|---|---|---|
+| **S-0** | 技术栈骨架 | Tauri 2 壳 + React 19 前端 + Pixi 画布占位 | 完成（2026-11-16） |
 | **S0** | 解析 + 地图校准 | `dem → replay.json` CLI | 未开始 |
 | **S1** | 2D 画布 | 可拖拽 2D 回放页 | 未开始 |
 | **S2** | 视频条 + 同步 | 视频 / 2D 同屏 | 未开始 |

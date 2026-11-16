@@ -21,6 +21,37 @@
 | HLAE（`advancedfx`） | <https://github.com/advancedfx/advancedfx> | 待定 | 未获取（作为外部工具调用，不内嵌） | demo 相机与逐 tick 命令 | MIT；**子模块另有许可，须逐项核对**；含 VAC 风险警告，仅限离线 demo |
 | `cs2-map-icons`（overview 数据） | <https://github.com/MurkyYT/cs2-map-icons> | 待定 | 未获取 | 地图盘面校准（开发期） | 许可待核；雷达图为 Valve 资产，发布版改为本机提取 |
 
+## 构建与运行时依赖（由 `package.json` / `Cargo.lock` 锁定）
+
+本表只登记主依赖的许可结论；版本以锁文件为准，升级随锁文件变化，不在本表逐次追写。
+
+| 名称 | 版本 | 用途 | 许可结论 |
+|---|---|---|---|
+| `tauri` + `tauri-build`（crate） | 2.12.x / 2.7.x | 桌面壳与构建脚本 | MIT OR Apache-2.0 |
+| `react` / `react-dom` | 19.3.1 | 前端框架 | MIT |
+| `zustand` | 5.1.0 | 状态层 | MIT |
+| `pixi.js` | 8.23.0 | 2D 画布 | MIT |
+| `vite` / `@vitejs/plugin-react` | 8.3.8 / 6.3.0 | 构建与开发服务器 | MIT |
+| `typescript` | 7.0.2 | 类型检查 | Apache-2.0 |
+| `sass` | 1.108.2 | SCSS 编译 | MIT |
+| `@tauri-apps/api` | 2.12.4 | 前端调用 Rust 桥 | MIT OR Apache-2.0 |
+| `markdownlint-cli2` / `markdown-link-check` | 0.24.1 / 3.15.0 | 文档校验 | MIT / ISC |
+| `remark-cli` / `remark-validate-links` | 12.0.1 / 13.1.0 | 锚点与相对链接校验 | MIT |
+| `@commitlint/*` / `husky` / `lint-staged` | 21.x / 9.1.7 / 17.6.1 | 提交门禁 | MIT |
+
+## 本地参考源码（浅克隆，位于仓库外 `D:\Projects\_refs`，不入库）
+
+只作阅读与比对，不进入本仓库的版本控制；如需复用代码，先按上表登记并核对许可。
+
+| 名称 | 来源 URL | 版本 | SHA256 | 用途 | 许可结论 |
+|---|---|---|---|---|---|
+| `cs-demo-manager` | <https://github.com/akiver/cs-demo-manager> | HEAD `b0d3258`（2026-11-16） | 不比对（浅克隆，以 HEAD 定位） | demo 库、2D 雷达、录制 shim 的架构参照 | MIT |
+| `demoparser` | <https://github.com/LaihoE/demoparser> | HEAD `fb2baab`（2026-11-15） | 同上 | tick 列式输出与 `parse_ticks` 口径 | MIT |
+| `manta` | <https://github.com/dotabuff/manta> | HEAD `d4e4647`（2026-10-23） | 同上 | Source 2 demo 格式理解 | MIT |
+| `awpy` | <https://github.com/pnxenopoulos/awpy> | HEAD `4d819ee`（2026-11-11） | 同上 | 视线、距离、热图算法口径 | MIT |
+| `cs2-highlights-maker` | <https://github.com/Rovniy/cs2-highlights-maker> | HEAD `69835f3`（2026-06-12） | 同上 | HLAE + FFmpeg 编排范本 | **仓库无 LICENSE 文件 = 未声明许可**；只读，不复制代码 |
+| `cs2-map-icons` | <https://github.com/MurkyYT/cs2-map-icons> | HEAD `6dcfb3a`（2026-11-12） | 同上 | 地图 `overview` 校准数据（开发期） | **仓库无 LICENSE 文件 = 未声明许可**；雷达图属 Valve 资产，发布版改为本机提取 |
+
 ## 不入库的对象
 
 | 名称 | 来源 | 原因 |

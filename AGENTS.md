@@ -11,8 +11,12 @@
 | 验收（唯一入口） | `npm run verify` |
 | 快速验收（不查外链） | `npm run verify:fast` |
 | 文档专项（不跑 Rust） | `npm run docs:check` |
-| 构建 | `npm run build` |
-| 测试 | `npm run test` |
+| 前端类型检查 | `npm run typecheck` |
+| 前端开发服务器 | `npm run dev` |
+| 桌面应用（开发态） | `npm run app:dev` |
+| 桌面应用打包 | `npm run app:build` |
+| 后端构建 | `npm run build` |
+| 后端测试 | `npm run test` |
 
 任何"已验证/已通过"的说法，必须附**命令原文 + 退出码**。未执行就写「未执行」及原因。
 

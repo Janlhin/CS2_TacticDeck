@@ -16,6 +16,14 @@
 | W-04 | 提交门禁（commitlint + 钩子转发） | 故意提交 `tmp: bad message` → 非 0；合法 `docs: x` → 0 | 完成 | 2026-11-16 | 2026-11-16 |
 | W-05 | 脚本基线清零（`.cmd` / `.bat` 计数 = 0） | `git ls-files '*.cmd' '*.bat'` 空输出 → 0 | 完成 | 2026-11-16 | 2026-11-16 |
 | W-06 | 许可扫描接入 CI（`cargo deny` / 依赖许可检查） | `cargo deny check licenses` → 0（在首个 `Cargo.toml` 落地后启用） | 未开始 | 2026-11-16 | — |
+| W-07 | 技术栈骨架：Tauri 2 壳 + React 19 前端 + Pixi 画布占位 | `npm run verify` → 0（含 rust 的 fmt / clippy / test 三段）；`vite build` → 0 | 完成 | 2026-11-16 | 2026-11-16 |
+
+## 参考源码取证
+
+| 编号 | 目标 | 完成判据（命令 → 退出码） | 状态 | 创建时间 | 完成时间 |
+|---|---|---|---|---|---|
+| R-01 | 六个参考仓库浅克隆到仓库外（`D:\Projects\_refs`），并在 `MANIFEST.md` 登记 HEAD 与许可 | 目录存在 + MANIFEST 行数与仓库数一致 → 人工核对通过 | 完成 | 2026-11-16 | 2026-11-16 |
+| R-02 | 读完 `demoparser` 的 tick 列式输出与 `awpy` 的坐标换算，落成 `replay.json` 字段草案 | 字段草案写入 `docs/`，且 T-01 可直接按草案实现 | 未开始 | 2026-11-16 | — |
 
 ## S0 解析与地图校准
 
