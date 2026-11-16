@@ -1,0 +1,8 @@
+{
+  "timeout": "20s",
+  "retryOnRateLimit": 2,
+  "ignorePatterns": [
+    { "pattern": "^https://www.xiaoheihe.cn" },
+    { "pattern": "^https://github.com/.*/blob/" }
+  ]
+}
