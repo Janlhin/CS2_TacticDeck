@@ -12,7 +12,7 @@
 |---|---|---|---|---|---|
 | W-01 | 建立五个文档与根目录白名单 | `npm run verify` → 0（含五文档存在、字段非空、根目录比对） | 完成 | 2026-11-16 | 2026-11-16 |
 | W-02 | 唯一验收入口 `scripts/verify.ps1` | `npm run verify` → 0 | 完成 | 2026-11-16 | 2026-11-16 |
-| W-03 | CI 每次推送与 PR 运行 verify | GitHub Actions 上 `verify` 步骤绿色（`gh run list` 首条 `conclusion=success`） | 进行中 | 2026-11-16 | — |
+| W-03 | CI 每次推送与 PR 运行 verify | GitHub Actions 上 `verify` 步骤绿色（`gh run list` 首条 `conclusion=success`）→ 已验（run `43864689689`） | 完成 | 2026-11-16 | 2026-11-16 |
 | W-04 | 提交门禁（commitlint + 钩子转发） | 故意提交 `tmp: bad message` → 非 0；合法 `docs: x` → 0 | 完成 | 2026-11-16 | 2026-11-16 |
 | W-05 | 脚本基线清零（`.cmd` / `.bat` 计数 = 0） | `git ls-files '*.cmd' '*.bat'` 空输出 → 0 | 完成 | 2026-11-16 | 2026-11-16 |
 | W-06 | 许可扫描接入 CI（`cargo deny` / 依赖许可检查） | `cargo deny check licenses` → 0（在首个 `Cargo.toml` 落地后启用） | 未开始 | 2026-11-16 | — |
