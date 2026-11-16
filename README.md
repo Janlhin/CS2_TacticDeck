@@ -42,8 +42,8 @@ G1–G4 的命令属于规划中的二进制，当前尚未存在（见「已知
 | 样式 | Sass（SCSS） | 1.108.2 | `package.json` |
 | 3D 渲染（M2） | Three.js | 未引入（M2 接入） | 计划 |
 | 标注层（S3） | Konva | 未引入（S3 接入） | 计划 |
-| 包管理器 | npm | 10.9.8 | `package-lock.json` |
-| Node 运行时 | Node.js | 22.23.2 | `.nvmrc` |
+| 包管理器 | npm | 11.20.0 | `package-lock.json` + `package.json` 的 `engines` |
+| Node 运行时 | Node.js | 26.13.0 | `.nvmrc`（`verify` 的 `toolchain/node` 步骤比对） |
 | 脚本运行时 | PowerShell | 7.6.4（要求 ≥ 7.4） | `scripts/*.ps1` 的 `#requires` |
 | demo 解析（主） | `source2-demo` crate | 0.5.11（S0 引入） | 计划 |
 | demo 解析（备） | `@laihoe/demoparser2` | 未引入（S0 兜底） | 计划 |
@@ -73,7 +73,9 @@ G1–G4 的命令属于规划中的二进制，当前尚未存在（见「已知
 
 ## 安装与运行
 
-前置：PowerShell 7.4+、Node.js 22（版本见 `.nvmrc`）、Rust 1.99（后续构建阶段才需要）。先克隆 `https://github.com/Janlhin/CS2_TacticDeck.git` 并进入目录。
+前置：PowerShell 7.4+、Node.js 26.13.0（版本见 `.nvmrc`）、Rust 1.99（后续构建阶段才需要）。先克隆 `https://github.com/Janlhin/CS2_TacticDeck.git` 并进入目录。
+
+机器上若存在多个 Node（例如某些工具自带运行时并排在 PATH 前面），把 Node 26 放到 PATH 最前；`npm run verify` 的 `toolchain/node` 步骤会在版本不符时直接失败并打印实际解析到的 `node.exe` 路径。`.npmrc` 已设 `engine-strict=true`，装依赖时同样会拦。
 
 安装依赖（一次性）：
 

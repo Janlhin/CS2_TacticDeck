@@ -20,6 +20,8 @@
 
 任何"已验证/已通过"的说法，必须附**命令原文 + 退出码**。未执行就写「未执行」及原因。
 
+Node 版本由 `.nvmrc` 守卫：若 shell 里 `node -v` 不是 `26.13.0`，先 `$env:PATH = "C:\Program Files\nodejs;" + $env:PATH` 再跑命令，否则 `toolchain/node` 直接失败。
+
 ## 条款锚点
 
 - 校验链与唯一入口 → [校验链](docs/engineering-standards.md#校验链)

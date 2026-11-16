@@ -123,3 +123,16 @@
   - *保守用 Tauri 1 / Vite 5*：与"升级到最新"的方向直接冲突，且 Tauri 2 已是当前主版本。
 - **影响范围**：`package.json`、`src-tauri/Cargo.toml`、`README.md` 的技术栈表。
 - **复审条件**：Tauri 3 发布 stable，或任一依赖的 major 升级导致实测失败。
+
+## D-011 Node 运行时定为 26.13.0，并把版本一致性做成门禁
+
+- **日期**：2026-11-16
+- **决策**：项目 Node 基线为 `26.13.0`（本机 `C:\Program Files\nodejs\`），npm 为随附的 `11.20.0`；`.npmrc` 设 `engine-strict=true`；`verify` 新增 `toolchain/node` 步骤，比对 `.nvmrc` 与实际 `node -v`，不符即失败并打印解析到的 `node.exe` 路径。
+- **背景**：本机同时存在多个 Node 运行时（工具自带运行时会在 PATH 中排在系统 Node 之前），早期开发因此一直跑在 22.23.2 上，与"技术栈取最新"的方向不符，且这类偏差不会有任何报错——只会安静地用旧版本跑通。
+- **被采纳方案**：把"用哪个 Node"从口头约定变成可执行门禁（`.nvmrc` + `engines` + `engine-strict` + `verify` 步骤）。
+- **被否决的替代方案与理由**：
+  - *只在文档里写版本要求*：已经证明会失效，跑的人不会去核对。
+  - *改系统 PATH 顺序*：影响本机其他工具，副作用超出本仓库边界，且工具运行时可能再次前置自己。
+  - *降级基线到 22 求稳*：与既定方向冲突；26 下 `tsc` / `vite build` / `verify` 均实测通过。
+- **影响范围**：`.nvmrc`、`.npmrc`、`package.json` 的 `engines`、`scripts/verify.ps1`、CI 的 `node-version-file`。
+- **复审条件**：Node 28 发布，或任一依赖在 26 下实测失败。
