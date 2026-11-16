@@ -13,6 +13,7 @@ export function RadarCanvas() {
     if (!host) return;
 
     let disposed = false;
+    let ready = false;
     const app = new Application();
 
     const boot = async () => {
@@ -23,11 +24,15 @@ export function RadarCanvas() {
         autoDensity: true,
         resolution: window.devicePixelRatio || 1,
       });
+
+      // StrictMode 下 effect 可能在 init 完成前就被清理，必须在此处补一次销毁
       if (disposed) {
         app.destroy(true);
         return;
       }
+
       host.appendChild(app.canvas);
+      ready = true;
       drawGrid(app, host.clientWidth, host.clientHeight);
     };
 
@@ -35,7 +40,8 @@ export function RadarCanvas() {
 
     return () => {
       disposed = true;
-      app.destroy(true);
+      // init 未完成的场景交给 boot() 里的 disposed 分支处理，这里只销毁已就绪的实例
+      if (ready) app.destroy(true);
     };
   }, []);
 
