@@ -4,6 +4,9 @@
   "private": true,
   "description": "本地优先的 CS2 多 POV 战术复盘工作台",
   "type": "module",
+  "engines": {
+    "node": ">=26.13.0"
+  },
   "scripts": {
     "verify": "pwsh -NoLogo -NoProfile -File scripts/verify.ps1",
     "verify:fast": "pwsh -NoLogo -NoProfile -File scripts/verify.ps1 -NoExternal",
