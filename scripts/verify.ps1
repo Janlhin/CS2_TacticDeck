@@ -206,6 +206,20 @@ Invoke-Step 'version/semver' {
     "版本 $v"
 }
 
+# ---------------------------------------------------------------- 11b. Node 版本
+Invoke-Step 'toolchain/node' {
+    $nvmrc = Join-Path $repo '.nvmrc'
+    if (-not (Test-Path -LiteralPath $nvmrc)) { Fail '缺少 .nvmrc' }
+    $want = (Get-Content -LiteralPath $nvmrc -Raw).Trim()
+    $node = Get-Command node -ErrorAction SilentlyContinue
+    if (-not $node) { Fail 'PATH 中找不到 node' }
+    $got = (& node -v 2>$null).Trim().TrimStart('v')
+    if ($got -ne $want) {
+        Fail "Node 版本不符：.nvmrc=$want，实际=$got（$($node.Source)）。把 $($want) 放到 PATH 前面再重试"
+    }
+    "Node $got，与 .nvmrc 一致（$($node.Source)）"
+}
+
 # ---------------------------------------------------------------- 12. Rust
 $cargoManifest = Join-Path $repo 'src-tauri/Cargo.toml'
 $hasCargo = Test-Path -LiteralPath $cargoManifest
