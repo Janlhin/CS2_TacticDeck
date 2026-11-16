@@ -1,15 +1,19 @@
 #requires -Version 7.4
 <#
 .SYNOPSIS
-    构建入口。当前仓库处于文档与门禁阶段，无 Cargo.toml 时打印 SKIP 并以 0 退出。
+    构建入口：构建 Tauri 后端与前端产物。
 #>
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
+$manifest = Join-Path $repo 'src-tauri/Cargo.toml'
 
-if (-not (Test-Path -LiteralPath (Join-Path $repo 'Cargo.toml'))) {
-    Write-Host '[SKIP]  无 Cargo.toml，构建阶段尚未开始（见 TASKS.md S0）'
+if (-not (Test-Path -LiteralPath $manifest)) {
+    Write-Host '[SKIP]  无 src-tauri/Cargo.toml，构建阶段尚未开始'
     exit 0
 }
 
-& cargo build --all
+& cargo build --manifest-path $manifest --all
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+& npm run build:web
 exit $LASTEXITCODE

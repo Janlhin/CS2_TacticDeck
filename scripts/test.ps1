@@ -1,15 +1,16 @@
 #requires -Version 7.4
 <#
 .SYNOPSIS
-    测试入口。当前无 Cargo.toml 时打印 SKIP 并以 0 退出；存在时运行 cargo test。
+    测试入口：运行 Rust 单元测试。
 #>
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
+$manifest = Join-Path $repo 'src-tauri/Cargo.toml'
 
-if (-not (Test-Path -LiteralPath (Join-Path $repo 'Cargo.toml'))) {
-    Write-Host '[SKIP]  无 Cargo.toml，测试阶段尚未开始（见 TASKS.md）'
+if (-not (Test-Path -LiteralPath $manifest)) {
+    Write-Host '[SKIP]  无 src-tauri/Cargo.toml，测试阶段尚未开始'
     exit 0
 }
 
-& cargo test --all
+& cargo test --manifest-path $manifest --all
 exit $LASTEXITCODE

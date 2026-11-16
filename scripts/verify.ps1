@@ -112,6 +112,8 @@ Invoke-Step 'layout/root-whitelist' {
         '.gitignore', '.gitattributes', '.editorconfig', '.npmrc', '.nvmrc', '.env.example',
         'commitlint.config.mjs', 'tsconfig.json', 'eslint.config.mjs', 'vitest.config.mjs', 'playwright.config.mjs',
         '.github', '.husky', '.vscode', 'CODEOWNERS',
+        'index.html', 'vite.config.ts', 'tsconfig.json', 'sass.config.json',
+        'src', 'src-tauri',
         'docs', 'scripts', 'config', 'crates', 'apps'
     )
     $extra = @($top | Where-Object { $_ -notin $allowed })
@@ -205,26 +207,27 @@ Invoke-Step 'version/semver' {
 }
 
 # ---------------------------------------------------------------- 12. Rust
-$hasCargo = Test-Path -LiteralPath (Join-Path $repo 'Cargo.toml')
+$cargoManifest = Join-Path $repo 'src-tauri/Cargo.toml'
+$hasCargo = Test-Path -LiteralPath $cargoManifest
 if ($hasCargo -and -not $NoCargo) {
     Invoke-Step 'rust/fmt' {
-        & cargo fmt --all -- --check
+        & cargo fmt --manifest-path $cargoManifest --all -- --check
         if ($LASTEXITCODE -ne 0) { Fail "cargo fmt 退出码 $LASTEXITCODE" }
         '格式一致'
     }
     Invoke-Step 'rust/clippy' {
-        & cargo clippy --all-targets -- -D warnings
+        & cargo clippy --manifest-path $cargoManifest --all-targets -- -D warnings
         if ($LASTEXITCODE -ne 0) { Fail "cargo clippy 退出码 $LASTEXITCODE" }
         '零警告'
     }
     Invoke-Step 'rust/test' {
-        & cargo test --all
+        & cargo test --manifest-path $cargoManifest --all
         if ($LASTEXITCODE -ne 0) { Fail "cargo test 退出码 $LASTEXITCODE" }
         '全部通过'
     }
 }
 else {
-    Write-Step 'rust/fmt' 'SKIP' '无 Cargo.toml 或按参数跳过'
+    Write-Step 'rust/fmt' 'SKIP' '无 src-tauri/Cargo.toml 或按参数跳过'
     Write-Step 'rust/clippy' 'SKIP' '同上'
     Write-Step 'rust/test' 'SKIP' '同上'
 }
