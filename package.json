@@ -8,6 +8,12 @@
     "verify": "pwsh -NoLogo -NoProfile -File scripts/verify.ps1",
     "verify:fast": "pwsh -NoLogo -NoProfile -File scripts/verify.ps1 -NoExternal",
     "docs:check": "pwsh -NoLogo -NoProfile -File scripts/verify.ps1 -NoCargo",
+    "dev": "vite",
+    "build:web": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "tauri": "tauri",
+    "app:dev": "tauri dev",
+    "app:build": "tauri build",
     "build": "pwsh -NoLogo -NoProfile -File scripts/build.ps1",
     "test": "pwsh -NoLogo -NoProfile -File scripts/test.ps1",
     "prepare": "husky"
@@ -15,11 +21,25 @@
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",
+    "@tauri-apps/cli": "^2.12.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.6.1",
     "markdown-link-check": "^3.15.0",
     "markdownlint-cli2": "^0.24.1",
     "remark-cli": "^12.0.1",
-    "remark-validate-links": "^13.1.0"
+    "remark-validate-links": "^13.1.0",
+    "sass": "^1.108.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.12.4",
+    "pixi.js": "^8.23.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zustand": "^5.1.0"
   }
 }

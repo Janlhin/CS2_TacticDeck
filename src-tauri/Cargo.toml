@@ -1,0 +1,19 @@
+[package]
+name = "cs2-tacticdeck"
+version = "0.1.0"
+edition = "2024"
+description = "本地优先的 CS2 多 POV 战术复盘工作台"
+license = "MIT"
+rust-version = "1.90"
+
+[lib]
+name = "cs2_tacticdeck_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7", features = [] }
+
+[dependencies]
+tauri = { version = "2.12", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
