@@ -100,6 +100,10 @@ export default function App() {
         <span>骨架阶段：布局与状态层可用，解析与播放尚未接入</span>
         <span className="sep">|</span>
         <span>验收口径 npm run verify</span>
+        <span className="sep">|</span>
+        <span className="license">
+          AGPL-3.0-or-later · 源码 github.com/Janlhin/CS2_TacticDeck
+        </span>
       </footer>
     </div>
   );
