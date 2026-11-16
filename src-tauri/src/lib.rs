@@ -7,8 +7,8 @@ pub struct AppInfo {
     pub pov_slots: u8,
 }
 
-/// 五路是产品定义的一部分：主 POV + 最多四路跟随。
-pub const POV_SLOTS: u8 = 5;
+/// 十名选手各一路 POV；另有固定 2D 总览一个槽位，左栏合计 11 项。
+pub const POV_SLOTS: u8 = 10;
 
 pub fn app_info() -> AppInfo {
     AppInfo {
@@ -36,10 +36,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn app_info_reports_five_pov_slots() {
+    fn app_info_reports_ten_player_slots() {
         let info = app_info();
         assert_eq!(info.pov_slots, POV_SLOTS);
-        assert_eq!(info.pov_slots, 5);
+        assert_eq!(info.pov_slots, 10);
     }
 
     #[test]
