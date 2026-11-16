@@ -171,4 +171,8 @@ npm run verify
 
 ## 许可证
 
-[MIT](LICENSE) © 2026 Janlhin。第三方组件的许可与边界见 [docs/third-party-notices.md](docs/third-party-notices.md)。
+**AGPL-3.0-or-later**（GNU Affero General Public License v3 或更新版本）© 2026 Janlhin。全文见 [LICENSE](LICENSE)，历史授权与免责见 [NOTICE](NOTICE)。
+
+选择 copyleft 的目的很明确：**不允许把本项目改成闭源商业产品**。分发衍生作品、或通过网络向用户提供其功能，都必须以 AGPL 提供完整对应源码；内部自用、二次开发、自行构建均不受限制。
+
+历史版本（截至提交 `4d97624`）曾以 MIT 发布，那部分授权对已获得副本的人不可撤回，已在 [NOTICE](NOTICE) 中说明。第三方组件的许可与边界见 [docs/third-party-notices.md](docs/third-party-notices.md)。

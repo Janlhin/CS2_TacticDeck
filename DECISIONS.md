@@ -136,3 +136,17 @@
   - *降级基线到 22 求稳*：与既定方向冲突；26 下 `tsc` / `vite build` / `verify` 均实测通过。
 - **影响范围**：`.nvmrc`、`.npmrc`、`package.json` 的 `engines`、`scripts/verify.ps1`、CI 的 `node-version-file`。
 - **复审条件**：Node 28 发布，或任一依赖在 26 下实测失败。
+
+## D-012 许可证由 MIT 改为 AGPL-3.0-or-later
+
+- **日期**：2026-11-16
+- **决策**：仓库许可改为 `AGPL-3.0-or-later`，根目录新增 `NOTICE` 记录历史授权；`package.json` 的 `license` 字段同步。
+- **背景**：目标是**阻止闭源商业化**——避免出现"拿本项目源码套壳成闭源产品"的情形，尤其是对标产品 cs2.cam 那种闭源商业形态。MIT 允许这种用法，且不要求回馈。
+- **被采纳方案**：AGPL-3.0-or-later。copyleft 强，且第 13 条覆盖"网络提供服务"的场景；"or later" 保留升级路径。
+- **被否决的替代方案与理由**：
+  - *维持 MIT*：正是要阻止的情形被允许。
+  - *Apache-2.0*：只加专利条款，不产生 copyleft 效果，闭源套壳照样可行。
+  - *BSL / SSPL*：非 OSI 认可，会同时挡住正常开源使用者，且条款模糊、争议大。
+  - *AGPL + 商业授权双许可*：可作为后期选项，但当前没有商业化收入，先不铺。
+- **影响范围**：`LICENSE`、`NOTICE`、`package.json`、`README.md`、`docs/third-party-notices.md`、界面底栏（AGPL 第 5(d) 条要求交互界面展示法律声明）。
+- **复审条件**：① 若决定做服务端录制或 Web 形态（Q-01 选 B），须复核第 13 条义务；② 若社区贡献因 AGPL 明显受阻，重新评估是否增加商业/宽松双许可；③ 若 LLM 生成的代码中混入不可再许可的来源，立即核查。
