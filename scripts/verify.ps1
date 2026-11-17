@@ -109,6 +109,7 @@ Invoke-Step 'layout/root-whitelist' {
         'README.md', 'AGENTS.md', 'DECISIONS.md', 'TASKS.md', 'MANIFEST.md',
         'LICENSE', 'CHANGELOG.md', 'NOTICE',
         'package.json', 'deno.json', 'deno.lock',
+        'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml',
         '.gitignore', '.gitattributes', '.editorconfig', '.npmrc', '.deno-version', '.env.example',
         'commitlint.config.mjs', 'tsconfig.json', 'eslint.config.mjs', 'vitest.config.mjs', 'playwright.config.mjs',
         '.github', '.husky', '.vscode', 'CODEOWNERS',
@@ -226,20 +227,38 @@ Invoke-Step 'toolchain/deno' {
 
 # ---------------------------------------------------------------- 12. Rust
 $cargoManifest = Join-Path $repo 'src-tauri/Cargo.toml'
+$workspaceManifest = Join-Path $repo 'Cargo.toml'
 $hasCargo = Test-Path -LiteralPath $cargoManifest
+# 根目录有 workspace 时统一按工作区校验，否则退回单包；cargo fmt 不认 --workspace
+$inWorkspace = Test-Path -LiteralPath $workspaceManifest
 if ($hasCargo -and -not $NoCargo) {
     Invoke-Step 'rust/fmt' {
-        & cargo fmt --manifest-path $cargoManifest --all -- --check
+        if ($inWorkspace) {
+            & cargo fmt --all -- --check
+        }
+        else {
+            & cargo fmt --manifest-path $cargoManifest --all -- --check
+        }
         if ($LASTEXITCODE -ne 0) { Fail "cargo fmt 退出码 $LASTEXITCODE" }
         '格式一致'
     }
     Invoke-Step 'rust/clippy' {
-        & cargo clippy --manifest-path $cargoManifest --all-targets -- -D warnings
+        if ($inWorkspace) {
+            & cargo clippy --workspace --all-targets -- -D warnings
+        }
+        else {
+            & cargo clippy --manifest-path $cargoManifest --all-targets -- -D warnings
+        }
         if ($LASTEXITCODE -ne 0) { Fail "cargo clippy 退出码 $LASTEXITCODE" }
         '零警告'
     }
     Invoke-Step 'rust/test' {
-        & cargo test --manifest-path $cargoManifest --all
+        if ($inWorkspace) {
+            & cargo test --workspace --all
+        }
+        else {
+            & cargo test --manifest-path $cargoManifest --all
+        }
         if ($LASTEXITCODE -ne 0) { Fail "cargo test 退出码 $LASTEXITCODE" }
         '全部通过'
     }
