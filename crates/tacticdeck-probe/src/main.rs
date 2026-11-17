@@ -7,10 +7,7 @@ use std::io::BufReader;
 include!("schema.rs");
 include!("probe.rs");
 
-mod map_profile;
-mod vpk;
-
-use map_profile::{MapProfile, MapProfiles};
+use tacticdeck_map::map_profile::{self, MapProfile, MapProfiles};
 
 /// 把采到的世界坐标按「地图雷达标定」或「包围盒」压到 0..1
 fn build_frames(probe: &Probe, profile: Option<&MapProfile>) -> Vec<Frame> {
@@ -65,6 +62,7 @@ fn run() -> Result<()> {
     let mut validate: Option<String> = None;
     let mut step: u32 = 8;
     let mut extract_maps = false;
+    let mut extract_radar: Option<String> = None;
     let mut cs2_dir: Option<String> = None;
     let mut map_profile_path: Option<String> = None;
 
@@ -91,6 +89,10 @@ fn run() -> Result<()> {
                 }
             }
             "--extract-maps" => extract_maps = true,
+            "--extract-radar" => {
+                i += 1;
+                extract_radar = args.get(i).cloned();
+            }
             "--cs2" => {
                 i += 1;
                 cs2_dir = args.get(i).cloned();
@@ -127,6 +129,15 @@ fn run() -> Result<()> {
                 mirage.pos_x, mirage.pos_y, mirage.scale, mirage.rotate
             );
         }
+        return Ok(());
+    }
+
+    if let Some(map) = extract_radar {
+        let out = out.unwrap_or_else(|| format!("{map}_radar.png"));
+        let png =
+            tacticdeck_map::radar::radar_png(&map, cs2_dir.as_deref().map(std::path::Path::new))?;
+        std::fs::write(&out, &png).with_context(|| format!("写 {out} 失败"))?;
+        println!("{map} 雷达底图 → {out}（{} 字节）", png.len());
         return Ok(());
     }
 
@@ -301,4 +312,21 @@ fn validate_replay(path: &str) -> Result<()> {
         replay.players.len()
     );
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{CELL_SIZE, WORLD_HALF, cell_to_world};
+
+    /// 校准用例：Source 2 的格子边长与世界原点必须是 512 / 16384
+    #[test]
+    fn coords_cell_to_world_matches_source2_grid() {
+        assert_eq!(CELL_SIZE, 512.0);
+        assert_eq!(WORLD_HALF, 16384.0);
+        // 实测：tick 3200 槽位 1 读到 cellX=30 vecX=223、cellY=30 vecY=367
+        assert!((cell_to_world(30, 223.0) - -801.0).abs() < 0.001);
+        assert!((cell_to_world(30, 367.0) - -657.0).abs() < 0.001);
+        // 负格子也要能还原（世界原点左侧的区域）
+        assert!((cell_to_world(0, 100.0) - -16284.0).abs() < 0.001);
+    }
 }

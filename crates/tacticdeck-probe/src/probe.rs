@@ -298,20 +298,3 @@ impl Observer for Probe {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::{cell_to_world, CELL_SIZE, WORLD_HALF};
-
-    /// 校准用例：Source 2 的格子边长与世界原点必须是 512 / 16384
-    #[test]
-    fn coords_cell_to_world_matches_source2_grid() {
-        assert_eq!(CELL_SIZE, 512.0);
-        assert_eq!(WORLD_HALF, 16384.0);
-        // 实测：tick 3200 槽位 1 读到 cellX=30 vecX=223、cellY=30 vecY=367
-        assert!((cell_to_world(30, 223.0) - -801.0).abs() < 0.001);
-        assert!((cell_to_world(30, 367.0) - -657.0).abs() < 0.001);
-        // 负格子也要能还原（世界原点左侧的区域）
-        assert!((cell_to_world(0, 100.0) - -16284.0).abs() < 0.001);
-    }
-}
