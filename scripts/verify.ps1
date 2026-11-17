@@ -114,6 +114,7 @@ Invoke-Step 'layout/root-whitelist' {
         '.github', '.husky', '.vscode', 'CODEOWNERS',
         'index.html', 'vite.config.ts', 'tsconfig.json', 'sass.config.json',
         'src', 'src-tauri',
+        'tests',
         'docs', 'scripts', 'config', 'crates', 'apps'
     )
     $extra = @($top | Where-Object { $_ -notin $allowed })
