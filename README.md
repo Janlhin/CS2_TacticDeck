@@ -45,7 +45,8 @@ G1–G4 的命令属于规划中的二进制，当前尚未存在（见「已知
 | 包管理与工具链 | Deno | 2.9.8 | `deno.json` + `deno.lock` + `.deno-version`（`verify` 的 `toolchain/deno` 步骤比对） |
 | 脚本运行时 | PowerShell | 7.6.4（要求 ≥ 7.4） | `scripts/*.ps1` 的 `#requires` |
 | demo 解析（主） | `source2-demo` crate | 0.5.11（已接入，T-01） | `crates/tacticdeck-probe/Cargo.toml` |
-| 地图标定（雷达） | 本机 CS2 `pak01_dir.vpk` 内 `resource/overviews/*.txt` | 运行时提取（T-02） | `crates/tacticdeck-probe/src/map_profile.rs` |
+| 地图标定（雷达） | 本机 CS2 `pak01_dir.vpk` 内 `resource/overviews/*.txt` | 运行时提取（T-02） | `crates/tacticdeck-map/src/map_profile.rs` |
+| 雷达底图 | 本机 CS2 `pak01_dir.vpk` 内 `panorama/images/overheadmaps/*.vtex_c` | 运行时解码，不随包分发（T-17） | `crates/tacticdeck-map/src/radar.rs` |
 | demo 解析（备） | `@laihoe/demoparser2` | 未引入（S0 兜底） | 计划 |
 | 视频编码 | FFmpeg（仅 nvenc / amf / mf + aac） | 随抓屏器 | 运行时探测 |
 
@@ -107,6 +108,7 @@ deno task test:web
 - `--validate <replay.json>`：只读校验，检查 10 名选手、槽位连续、帧 tick 递增、坐标落在 0..1、回合起止与击杀槽位合法。
 - `--extract-maps`（可配 `--cs2 <game/csgo 路径>` 与 `--out <map-profile.json>`）：从本机 CS2 的 `pak01_dir.vpk` 里读 `resource/overviews/*.txt`，抽出每张地图的 `pos_x / pos_y / scale / rotate`。CS2 路径默认按「参数 → `CS2_DIR` → Steam 注册表与 libraryfolders.vdf」的顺序探测。
 - `--map-profile <map-profile.json>`：让导出改用雷达标定换算坐标（`meta.normalize` 变 `radar`），红点直接落在雷达图对应的位置。缺这张图时退回包围盒归一化。
+- `--extract-radar <map>`（可配 `--cs2 <game/csgo 路径>` 与 `--out <file.png>`）：把本机 CS2 里的雷达底图纹理（`panorama/images/overheadmaps/<map>_radar_psd.vtex_c`）解成 1024×1024 PNG，用于肉眼核对底图与坐标是否对齐。
 
 坐标口径：Source 2 的世界坐标是「格子 + 格内偏移」两段式存的——格子边长 **512** 单位、世界原点在 **-16384**，还原公式是 `cell * 512 - 16384 + vec`。拿到世界坐标后按地图的 `pos_x / pos_y / scale` 换成雷达像素，再压到 0..1 并把 y 轴翻到左下原点（板面口径）。
 
@@ -116,6 +118,8 @@ deno task test:web
 
 本机 CS2 实测（`--extract-maps`）：23 张地图，`de_mirage` 抽到 `pos_x=-3230 / pos_y=1713 / scale=5 / rotate=0`，与公开标定值一致。`map-profile.json` 同样是运行数据，不入库。
 
+本机雷达底图实测（`--extract-radar de_mirage`）：VTEX 1024×1024、format 28（RGBA8888，4 字节/像素）、单 mip、LZ4 压缩，解出 4,194,304 字节像素，写成 271,686 字节 PNG；盘面与十人点位在窗口内对齐。
+
 起窗口：`deno task app:dev`（需要 WebView2 运行时，Win10/11 默认自带）；只调前端样式可先跑 `deno task dev` 在浏览器里看。打包：`deno task app:build`（当前 `bundle.active` 为 `false`，只产出可执行文件，不做安装包）。
 
 demo 库目录（按优先级）：环境变量 `TACTICDECK_DEMO_DIR` → `文档/CS2_TacticDeck/demos` → 仓库根目录。前两处放 `replay.json` 即被扫描到；`.dem` 会列出来但标记「待导出」，先用 probe 导出成 `replay.json` 再点载入。窗口启动时自动载入库里第一条可用的回放，没有才退回内置合成样本。
@@ -123,7 +127,7 @@ demo 库目录（按优先级）：环境变量 `TACTICDECK_DEMO_DIR` → `文�
 ## 已知限制
 
 - **骨架 + 解析 + 本机库入口**：窗口、布局、左栏 11 槽（1 固定 2D + 10 人）、槽位状态层、Pixi 网格可跑；`.dem → replay.json` 已能产出真实数据，右栏「demo 库」会扫描本机回放并一键载入（T-13）。播放 / 同步 / 录制仍未接入，下表 G2–G4 的命令是待实现的契约。
-- **盘面是占位**：`RadarCanvas` 只画网格；坐标映射已经校准到雷达像素，但前端还没加载雷达图，画面上仍只有网格。
+- **底图是本机现取的真图**：2D 板面启动时向 Rust 侧要一张 `data:image/png` 底图，Rust 直接读本机 CS2 的 `panorama/images/overheadmaps/<map>_radar_psd.vtex_c`（VTEX：RGBA8888 + LZ4，1024×1024），解出来铺在板面下面。底图属 Valve 资产，只在运行时从玩家自己的安装里解码，不随仓库或安装包分发；没装 CS2 或取不到时退回网格（T-17）。
 - **只有 Mirage 有真记录验证**：坐标校准用 de_mirage 的真实 demo 跑通（65750 个采样点 99.6% 落在雷达图可走区域），其余地图的 `pos/scale` 能抽出来但还没有 demo 复核。
 
 - **平台**：只支持 Windows x64（抓屏依赖 DXGI）。
