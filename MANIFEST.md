@@ -28,6 +28,7 @@
 | 名称 | 版本 | 用途 | 许可结论 |
 |---|---|---|---|
 | `tauri` + `tauri-build`（crate） | 2.12.x / 2.7.x | 桌面壳与构建脚本 | MIT OR Apache-2.0 |
+| `winreg`（crate，仅 Windows） | 0.55.x | 读 Steam 安装路径以定位本机 CS2 | MIT OR Apache-2.0 |
 | `react` / `react-dom` | 19.3.1 | 前端框架 | MIT |
 | `zustand` | 5.1.0 | 状态层 | MIT |
 | `pixi.js` | 8.23.0 | 2D 画布 | MIT |

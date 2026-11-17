@@ -30,8 +30,8 @@
 | 编号 | 目标 | 完成判据（命令 → 退出码） | 状态 | 创建时间 | 完成时间 |
 |---|---|---|---|---|---|
 | T-01 | 封装 `source2-demo`，产出 `replay.json`（rounds / ticks / events / players） | `cargo run -p tacticdeck-probe -- --demo <f> --out replay.json` → 0，且 `cargo run -p tacticdeck-probe -- --validate replay.json` → 0 | 完成 | 2026-11-16 | 2026-11-17 |
-| T-02 | 地图 overview 提取（本机 CS2 → `map-profile.json`） | `cargo run -p tacticdeck-probe -- --extract-maps` → 0，`de_mirage` 的 `pos_x/pos_y/scale/rotate` 与已知值一致 | 未开始 | 2026-11-16 | — |
-| T-03 | 坐标校准用例（Mirage / Inferno / Ancients 各 1 个点位） | `cargo test -p tacticdeck-probe coords` → 0 | 未开始 | 2026-11-16 | — |
+| T-02 | 地图 overview 提取（本机 CS2 → `map-profile.json`） | `cargo run -p tacticdeck-probe -- --extract-maps` → 0，`de_mirage` 的 `pos_x/pos_y/scale/rotate` 与已知值一致 | 完成 | 2026-11-16 | 2026-11-17 |
+| T-03 | 坐标校准用例（Mirage / Inferno / Ancients 各 1 个点位），含 CS2 世界坐标每地图偏移的拟合 | `cargo test -p tacticdeck-probe coords` → 0 | 未开始 | 2026-11-16 | — |
 
 ## S1 2D 画布
 

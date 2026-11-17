@@ -45,6 +45,7 @@ G1–G4 的命令属于规划中的二进制，当前尚未存在（见「已知
 | 包管理与工具链 | Deno | 2.9.8 | `deno.json` + `deno.lock` + `.deno-version`（`verify` 的 `toolchain/deno` 步骤比对） |
 | 脚本运行时 | PowerShell | 7.6.4（要求 ≥ 7.4） | `scripts/*.ps1` 的 `#requires` |
 | demo 解析（主） | `source2-demo` crate | 0.5.11（已接入，T-01） | `crates/tacticdeck-probe/Cargo.toml` |
+| 地图标定（雷达） | 本机 CS2 `pak01_dir.vpk` 内 `resource/overviews/*.txt` | 运行时提取（T-02） | `crates/tacticdeck-probe/src/map_profile.rs` |
 | demo 解析（备） | `@laihoe/demoparser2` | 未引入（S0 兜底） | 计划 |
 | 视频编码 | FFmpeg（仅 nvenc / amf / mf + aac） | 随抓屏器 | 运行时探测 |
 
@@ -104,17 +105,23 @@ deno task test:web
 
 - `--demo <file.dem>` + `--out <replay.json>`：解析 demo 并写出前端契约格式；`--step <n>` 控制采样间隔（默认 8 tick）。
 - `--validate <replay.json>`：只读校验，检查 10 名选手、槽位连续、帧 tick 递增、坐标落在 0..1、回合起止与击杀槽位合法。
+- `--extract-maps`（可配 `--cs2 <game/csgo 路径>` 与 `--out <map-profile.json>`）：从本机 CS2 的 `pak01_dir.vpk` 里读 `resource/overviews/*.txt`，抽出每张地图的 `pos_x / pos_y / scale / rotate`。CS2 路径默认按「参数 → `CS2_DIR` → Steam 注册表与 libraryfolders.vdf」的顺序探测。
+- `--map-profile <map-profile.json>`：让导出尝试用雷达标定换算坐标（`meta.normalize` 变 `radar`）。**当前仍不准**：见「已知限制」里的世界坐标偏移问题，越界会被 `--validate` 拦下。
 
 坐标口径：Source 2 把世界坐标拆成 `cell`（1024 单位一格）与 `vec` 余数，两者拼成 `cell * 1024 + vec`；导出时按等比例包围盒压到 0..1 并翻转 y 轴（板面左下为原点）。地图雷达校准（`pos_x` / `pos_y` / `scale` / `rotate`）仍是 T-02，落成后替换这套临时归一化。
 
 真实 demo 实测（`test_demo.dem`，de_mirage，64 tick）：10 回合、6575 帧、48 条击杀、10 名选手、5 MB 单文件。`replay.json` 属运行数据，已进 `.gitignore`；`tests/replay-contract.test.ts` 在本地存在该文件时才跑契约回归，缺失则跳过。
+
+本机 CS2 实测（`--extract-maps`）：23 张地图，`de_mirage` 抽到 `pos_x=-3230 / pos_y=1713 / scale=5 / rotate=0`，与公开标定值一致。`map-profile.json` 同样是运行数据，不入库。
 
 起窗口：`deno task app:dev`（需要 WebView2 运行时，Win10/11 默认自带）；只调前端样式可先跑 `deno task dev` 在浏览器里看。打包：`deno task app:build`（当前 `bundle.active` 为 `false`，只产出可执行文件，不做安装包）。
 
 ## 已知限制
 
 - **只到骨架 + 解析**：窗口、布局、左栏 11 槽（1 固定 2D + 10 人）、槽位状态层、Pixi 网格可跑；`.dem → replay.json` 已能产出真实数据。但**前端还没接导入入口**：界面里跑的是内置 fixture，要换成真实数据得等 T-13 的本机 demo 库。播放 / 同步 / 录制仍未接入，下表 G2–G4 的命令是待实现的契约。
-- **盘面是占位**：`RadarCanvas` 只画网格；`replay.json` 现在是包围盒归一化，等地图校准（`pos_x` / `pos_y` / `scale` / `rotate`，T-02）接入后换成雷达坐标。
+- **盘面是占位**：`RadarCanvas` 只画网格；`replay.json` 现在是包围盒归一化，等 T-03 把雷达映射校准好才会落到真实雷达位置。
+- **CS2 世界坐标带每地图偏移**：CS:GO 时代的 `pos_x / pos_y / scale` 直接代入算不出正确像素——实测 de_mirage 的出生点换算后跑到 7.4（应 ≤ 1）。CS2 把地图摆在大坐标系里（实测 x 约 27000–35000），需要按出生点等锚点拟合「偏移 + 比例」，这属于 T-03。
+
 - **平台**：只支持 Windows x64（抓屏依赖 DXGI）。
 - **录制依赖外部工具**：HLAE 官方声明其为"技术意义上的 hack"，仅可用于看 demo 与制作视频。本项目只在离线 demo 模式调用，**绝不接入受 VAC 保护的服务器**。
 - **图形局限**：只支持 SDR；不支持旋转屏；独占全屏可能抓不到；多实例需自行加锁。
