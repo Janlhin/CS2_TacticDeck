@@ -31,7 +31,8 @@
 |---|---|---|---|---|---|
 | T-01 | 封装 `source2-demo`，产出 `replay.json`（rounds / ticks / events / players） | `cargo run -p tacticdeck-probe -- --demo <f> --out replay.json` → 0，且 `cargo run -p tacticdeck-probe -- --validate replay.json` → 0 | 完成 | 2026-11-16 | 2026-11-17 |
 | T-02 | 地图 overview 提取（本机 CS2 → `map-profile.json`） | `cargo run -p tacticdeck-probe -- --extract-maps` → 0，`de_mirage` 的 `pos_x/pos_y/scale/rotate` 与已知值一致 | 完成 | 2026-11-16 | 2026-11-17 |
-| T-03 | 坐标校准用例（Mirage / Inferno / Ancients 各 1 个点位），含 CS2 世界坐标每地图偏移的拟合 | `cargo test -p tacticdeck-probe coords` → 0 | 未开始 | 2026-11-16 | — |
+| T-03 | 坐标校准（Source 2 两段式世界坐标 → 雷达像素），Mirage 有真实 demo 复核 | `cargo test -p tacticdeck-probe coords` → 0 | 完成 | 2026-11-16 | 2026-11-17 |
+| T-03b | 其余地图的坐标复核（Inferno / Ancient / Dust2 各一份 demo 跑通） | 每张地图的 `cargo run -p tacticdeck-probe -- --validate replay.json` → 0，且 `tests/replay-contract.test.ts` 仍 0 | 未开始 | 2026-11-17 | — |
 
 ## S1 2D 画布
 

@@ -106,9 +106,11 @@ deno task test:web
 - `--demo <file.dem>` + `--out <replay.json>`：解析 demo 并写出前端契约格式；`--step <n>` 控制采样间隔（默认 8 tick）。
 - `--validate <replay.json>`：只读校验，检查 10 名选手、槽位连续、帧 tick 递增、坐标落在 0..1、回合起止与击杀槽位合法。
 - `--extract-maps`（可配 `--cs2 <game/csgo 路径>` 与 `--out <map-profile.json>`）：从本机 CS2 的 `pak01_dir.vpk` 里读 `resource/overviews/*.txt`，抽出每张地图的 `pos_x / pos_y / scale / rotate`。CS2 路径默认按「参数 → `CS2_DIR` → Steam 注册表与 libraryfolders.vdf」的顺序探测。
-- `--map-profile <map-profile.json>`：让导出尝试用雷达标定换算坐标（`meta.normalize` 变 `radar`）。**当前仍不准**：见「已知限制」里的世界坐标偏移问题，越界会被 `--validate` 拦下。
+- `--map-profile <map-profile.json>`：让导出改用雷达标定换算坐标（`meta.normalize` 变 `radar`），红点直接落在雷达图对应的位置。缺这张图时退回包围盒归一化。
 
-坐标口径：Source 2 把世界坐标拆成 `cell`（1024 单位一格）与 `vec` 余数，两者拼成 `cell * 1024 + vec`；导出时按等比例包围盒压到 0..1 并翻转 y 轴（板面左下为原点）。地图雷达校准（`pos_x` / `pos_y` / `scale` / `rotate`）仍是 T-02，落成后替换这套临时归一化。
+坐标口径：Source 2 的世界坐标是「格子 + 格内偏移」两段式存的——格子边长 **512** 单位、世界原点在 **-16384**，还原公式是 `cell * 512 - 16384 + vec`。拿到世界坐标后按地图的 `pos_x / pos_y / scale` 换成雷达像素，再压到 0..1 并把 y 轴翻到左下原点（板面口径）。
+
+坐标口径：Source 2 把世界坐标拆成 `cell` 与 `vec` 余数，还原公式 `cell * 512 - 16384 + vec`（格子边长 512，世界原点在 -16384）；导出默认按等比例包围盒压到 0..1 并翻转 y 轴（板面左下为原点），带 `--map-profile` 时改走雷达标定。
 
 真实 demo 实测（`test_demo.dem`，de_mirage，64 tick）：10 回合、6575 帧、48 条击杀、10 名选手、5 MB 单文件。`replay.json` 属运行数据，已进 `.gitignore`；`tests/replay-contract.test.ts` 在本地存在该文件时才跑契约回归，缺失则跳过。
 
@@ -119,8 +121,8 @@ deno task test:web
 ## 已知限制
 
 - **只到骨架 + 解析**：窗口、布局、左栏 11 槽（1 固定 2D + 10 人）、槽位状态层、Pixi 网格可跑；`.dem → replay.json` 已能产出真实数据。但**前端还没接导入入口**：界面里跑的是内置 fixture，要换成真实数据得等 T-13 的本机 demo 库。播放 / 同步 / 录制仍未接入，下表 G2–G4 的命令是待实现的契约。
-- **盘面是占位**：`RadarCanvas` 只画网格；`replay.json` 现在是包围盒归一化，等 T-03 把雷达映射校准好才会落到真实雷达位置。
-- **CS2 世界坐标带每地图偏移**：CS:GO 时代的 `pos_x / pos_y / scale` 直接代入算不出正确像素——实测 de_mirage 的出生点换算后跑到 7.4（应 ≤ 1）。CS2 把地图摆在大坐标系里（实测 x 约 27000–35000），需要按出生点等锚点拟合「偏移 + 比例」，这属于 T-03。
+- **盘面是占位**：`RadarCanvas` 只画网格；坐标映射已经校准到雷达像素，但前端还没加载雷达图，画面上仍只有网格。
+- **只有 Mirage 有真记录验证**：坐标校准用 de_mirage 的真实 demo 跑通（65750 个采样点 99.6% 落在雷达图可走区域），其余地图的 `pos/scale` 能抽出来但还没有 demo 复核。
 
 - **平台**：只支持 Windows x64（抓屏依赖 DXGI）。
 - **录制依赖外部工具**：HLAE 官方声明其为"技术意义上的 hack"，仅可用于看 demo 与制作视频。本项目只在离线 demo 模式调用，**绝不接入受 VAC 保护的服务器**。
