@@ -1,5 +1,10 @@
 [workspace]
-members = ["src-tauri", "crates/tacticdeck-probe", "crates/tacticdeck-map"]
+members = [
+    "src-tauri",
+    "crates/tacticdeck-probe",
+    "crates/tacticdeck-map",
+    "crates/tacticdeck-sync",
+]
 resolver = "3"
 
 [workspace.package]

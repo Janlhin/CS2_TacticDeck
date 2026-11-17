@@ -3612,6 +3612,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "tacticdeck-sync"
+version = "0.1.0"
+
+[[package]]
 name = "tao"
 version = "0.37.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
