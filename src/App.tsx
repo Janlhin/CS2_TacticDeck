@@ -14,7 +14,7 @@ import {
   readReplay,
   type LibraryEntry,
 } from './replay/library.ts';
-import { aliveCount, formatSeconds, killsUpTo, roundAt, tickToSeconds } from './replay/selectors.ts';
+import { aliveCount, formatSeconds, killsUpTo, roundAt, roundEvents, tickToSeconds } from './replay/selectors.ts';
 import { useAppStore } from './store/appStore.ts';
 import { OVERVIEW_ID } from './store/rail.ts';
 
@@ -317,7 +317,11 @@ export default function App() {
               <p className="hint">当前播放头之前没有击杀。</p>
             )}
             {replay ? <EventFeed replay={replay} tick={tick} onSeek={seekTick} /> : null}
-            <p className="hint">本回合累计 {kills.length} 次击杀 · 点击任一行跳到该 tick</p>
+            {replay ? (
+              <p className="hint">
+                本回合共 {roundEvents(replay, tick).length} 次击杀 · 已发生 {kills.length} · 点击任一行跳到该 tick
+              </p>
+            ) : null}
           </section>
 
           <section className="panel panel-grow">
