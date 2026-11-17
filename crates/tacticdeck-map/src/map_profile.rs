@@ -112,16 +112,31 @@ fn scalar<'a>(pairs: &'a [(String, String)], key: &str) -> Option<&'a str> {
         .map(|(_, value)| value.as_str())
 }
 
+/// 把 overview 里的贴图名归一成引擎地图名：
+/// `de_dust2_v2` / `de_cache_new` / `de_ancient_night` 都要对回 `de_dust2` / `de_cache` / `de_ancient`
+fn canonical_map_name(raw: &str) -> String {
+    let name = raw.trim().trim_matches('"').trim().to_ascii_lowercase();
+    for suffix in ["_v2", "_new", "_night", "_ladder", "_old"] {
+        if let Some(stripped) = name.strip_suffix(suffix) {
+            return stripped.to_string();
+        }
+    }
+    name
+}
+
 /// 解析一份 overview 文本（VPK 里就是 CS:GO 那一套 KeyValues）
 pub fn parse_overview(text: &str, fallback_map: &str) -> Result<MapProfile> {
     let pairs = parse_scalars(text);
-    let map = text
-        .lines()
-        .next()
+    // 首行可能是 `// HLTV overview description file for de_dust2_v2.bsp` 这种注释，不能当地图名
+    let first_line = text.lines().find(|line| {
+        let trimmed = line.trim();
+        !trimmed.is_empty() && !trimmed.starts_with("//")
+    });
+    let raw_name = first_line
         .map(|line| line.trim().trim_matches('"'))
         .filter(|name| !name.is_empty())
-        .unwrap_or(fallback_map)
-        .to_string();
+        .unwrap_or(fallback_map);
+    let map = canonical_map_name(raw_name);
 
     let number = |key: &str| -> Result<f32> {
         scalar(&pairs, key)
@@ -160,6 +175,8 @@ pub fn extract_from_vpk(vpk_path: &Path) -> Result<MapProfiles> {
     }
     anyhow::ensure!(!maps.is_empty(), "VPK 里没有找到 resource/overviews/*.txt");
     maps.sort_by(|a, b| a.map.cmp(&b.map));
+    // 同一张地图可能有 _v2 / _night 等多份 overview，保留第一份即可
+    maps.dedup_by(|a, b| a.map == b.map);
     Ok(MapProfiles {
         source: vpk_path.display().to_string(),
         maps,
@@ -278,6 +295,23 @@ mod tests {
         assert_eq!(profile.scale, 5.0);
         assert_eq!(profile.rotate, 0.0);
         assert_eq!(profile.image_size, 1024);
+    }
+
+    #[test]
+    fn skips_comment_first_line_for_map_name() {
+        let text = r#"
+// HLTV overview description file for de_dust2_v2.bsp
+"de_dust2_v2"
+{
+	"material"	"overviews/de_dust2_v2"
+	"pos_x"		"-2476"
+	"pos_y"		"3239"
+	"scale"		"4.4"
+	"rotate"	"1"
+}
+"#;
+        let profile = parse_overview(text, "de_dust2_v2").unwrap();
+        assert_eq!(profile.map, "de_dust2", "注释不能被当地图名，_v2 也要归一");
     }
 
     #[test]
