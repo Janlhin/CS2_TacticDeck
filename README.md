@@ -89,6 +89,12 @@ deno task hooks
 deno task verify
 ```
 
+前端逻辑测试（回放选择器、槽位轮换、十人点位断言）单独跑：
+
+```powershell
+deno task test:web
+```
+
 `deno task verify` 是**唯一验收入口**：它串起文档结构、字段、链接、根目录白名单、脚本基线，以及 `src-tauri/Cargo.toml` 存在时的 `cargo fmt` / `clippy` / `test`。它失败就不得提交，禁止绕过。
 
 起窗口：`deno task app:dev`（需要 WebView2 运行时，Win10/11 默认自带）；只调前端样式可先跑 `deno task dev` 在浏览器里看。打包：`deno task app:build`（当前 `bundle.active` 为 `false`，只产出可执行文件，不做安装包）。
