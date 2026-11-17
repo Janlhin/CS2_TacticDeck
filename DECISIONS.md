@@ -101,6 +101,7 @@
 
 ## D-009 工具启动层豁免：npm 的 `.cmd` 垫片
 
+- **状态**：已被 D-015 取代（工具一律由 Deno 直跑包入口文件，不再经过 `.cmd` 垫片）。
 - **日期**：2026-11-16
 - **决策**：允许 `scripts/verify.ps1` 调用 `node_modules/.bin/*.cmd` 垫片；项目自写代码中仍不出现 `.cmd` / `.bat` 文件，也不调用 `cmd.exe`。
 - **背景**：npm 在 Windows 上为每个依赖生成 `.cmd` 启动器，属于工具链自身产物，不在"项目自写脚本"范围内；若不使用它，就必须自行解析每个包的 bin 入口，反而引入新的脆弱点。
@@ -126,6 +127,7 @@
 
 ## D-011 Node 运行时定为 26.13.0，并把版本一致性做成门禁
 
+- **状态**：已被 D-015 取代（Node 不再出现在工具链中，门禁改为 Deno + `.deno-version`）。
 - **日期**：2026-11-16
 - **决策**：项目 Node 基线为 `26.13.0`（本机 `C:\Program Files\nodejs\`），npm 为随附的 `11.20.0`；`.npmrc` 设 `engine-strict=true`；`verify` 新增 `toolchain/node` 步骤，比对 `.nvmrc` 与实际 `node -v`，不符即失败并打印解析到的 `node.exe` 路径。
 - **背景**：本机同时存在多个 Node 运行时（工具自带运行时会在 PATH 中排在系统 Node 之前），早期开发因此一直跑在 22.23.2 上，与"技术栈取最新"的方向不符，且这类偏差不会有任何报错——只会安静地用旧版本跑通。
@@ -171,3 +173,13 @@
 - **被否决的替代方案与理由**：① *十宫格同屏*：1080p 十路并发解码不可行；② *五宫格 + 另外五路折叠*：层级混乱，找人不直观；③ *纯列表侧栏 + 无主视图*：失去放大观察的用途。
 - **影响范围**：`src/App.tsx`、`src/store/appStore.ts`（槽位模型改为 `overview` + 10 `player`）、`src/styles.scss`、`src-tauri/src/lib.rs`（`POV_SLOTS` 由 5 改 10，测试更名）。
 - **复审条件**：① 若实测 720p 六路并发稳定，增加"多格同播"开关按需开启；② 若单队十人以上（教练/替补），槽位需支持滚动越界与分页；③ 若用户反馈滚动找人不便，改为按队伍分组的折叠面板。
+
+## D-015 前端工具链由 Node/npm 整体切到 Deno
+
+- **日期**：2026-11-17
+- **决策**：前端依赖安装、脚本入口与全部 npm 工具（Vite 8 / TypeScript 7 / Tauri CLI / commitlint / markdownlint-cli2 / remark / markdown-link-check）改由 **Deno 2.9.8** 驱动；删除 `.nvmrc`、`package-lock.json` 与 `package.json` 的 `engines` / `scripts`，改由 `deno.json` 的 `task` 承载，锁文件换 `deno.lock`，版本门禁换 `.deno-version` + `verify` 的 `toolchain/deno` 步骤。项目**不再需要 Node.js**。
+- **背景**：本机 `C:\Program Files\nodejs\node.exe` 被替换为 `v28.0.0-nightly`（npm 12.2.2 在该 Node 上 `npm ci` 直接崩：`Class extends value undefined is not a constructor or null`），导致验收链整体不可执行。修 Node 只是把同一个坑往后挪，而"工具链取最新"的方向要求一个自带包管理、自带锁文件、且不受系统 Node 摆布的运行时。
+- **被采纳方案**：Deno 直跑 `node_modules/<包入口文件>`。实测通过的入口：`vite/bin/vite.js`（8.3.8）、`typescript/bin/tsc`（7.0.2）、`@tauri-apps/cli/tauri.js`（2.12.4）、`remark-cli/cli.js`（含 `remark-validate-links` 插件）、`markdownlint-cli2/markdownlint-cli2.mjs`（读 `config/markdownlint-cli2.jsonc`）、`markdown-link-check`（25 条外链）。`deno install` 产出 `deno.lock`（153 KB）与 338 个 `node_modules` 目录。
+- **被否决的替代方案与理由**：① *装回 Node 26.13.0*——环境被别人改一次就复发，且用户明确要求换 Deno；② *用 `deno run npm:<包>` 跑 CLI*——实测 `markdownlint-cli2` 会忽略 `--config`（报 MD013 行长错误），必须直跑本地入口文件才生效；③ *只把 Node 降级到 22*——与"取最新"冲突且收益为零；④ *保留 npm 双轨*——两套锁文件必然漂移。
+- **影响范围**：`deno.json`、`deno.lock`、`.deno-version`、`.npmrc`（仅留 registry）、`package.json`（去 `engines`/`scripts`）、`scripts/verify.ps1`（工具调用与 `toolchain/deno` 步骤）、`scripts/hooks/commit-msg.ps1`、`scripts/build.ps1`、`.github/workflows/verify.yml`、`README.md`、`AGENTS.md`、`docs/engineering-standards.md`、`TASKS.md`。
+- **复审条件**：① Deno 2.9.x 之外的大版本升级需单独提案；② 若任一 npm 工具在 Deno 下出现退出码失真或忽略配置，改回该工具的独立入口脚本并在本条记录；③ 若 Tauri CLI 的打包（`deno task app:build`）在 Deno 下失败，回退为"仅前端用 Deno、打包用独立 Node 便携版"，并重开本节。

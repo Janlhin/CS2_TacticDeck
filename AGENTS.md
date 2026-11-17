@@ -8,19 +8,19 @@
 
 | 目的 | 命令 |
 |---|---|
-| 验收（唯一入口） | `npm run verify` |
-| 快速验收（不查外链） | `npm run verify:fast` |
-| 文档专项（不跑 Rust） | `npm run docs:check` |
-| 前端类型检查 | `npm run typecheck` |
-| 前端开发服务器 | `npm run dev` |
-| 桌面应用（开发态） | `npm run app:dev` |
-| 桌面应用打包 | `npm run app:build` |
-| 后端构建 | `npm run build` |
-| 后端测试 | `npm run test` |
+| 验收（唯一入口） | `deno task verify` |
+| 快速验收（不查外链） | `deno task verify:fast` |
+| 文档专项（不跑 Rust） | `deno task docs:check` |
+| 前端类型检查 | `deno task typecheck` |
+| 前端开发服务器 | `deno task dev` |
+| 桌面应用（开发态） | `deno task app:dev` |
+| 桌面应用打包 | `deno task app:build` |
+| 后端构建 | `deno task build` |
+| 后端测试 | `deno task test` |
 
 任何"已验证/已通过"的说法，必须附**命令原文 + 退出码**。未执行就写「未执行」及原因。
 
-Node 版本由 `.nvmrc` 守卫：若 shell 里 `node -v` 不是 `26.13.0`，先 `$env:PATH = "C:\Program Files\nodejs;" + $env:PATH` 再跑命令，否则 `toolchain/node` 直接失败。
+Deno 版本由 `.deno-version` 守卫：若 `deno --version` 的版本号不是 `2.9.8`，`toolchain/deno` 步骤会直接失败并打印解析到的路径。前端依赖一律用 `deno install` 安装、工具一律用 `deno run -A node_modules/<包入口>` 启动，**不要**再走 `npm` / `npx` / `node_modules/.bin/*.cmd`。
 
 ## 条款锚点
 
@@ -39,7 +39,7 @@ Node 版本由 `.nvmrc` 守卫：若 shell 里 `node -v` 不是 `26.13.0`，先 
 
 ## 禁止清单
 
-- 未运行 `npm run verify` 就声称完成；用 `--no-verify`、注释测试、放宽容错规则来"通过"。
+- 未运行 `deno task verify` 就声称完成；用 `--no-verify`、注释测试、放宽容错规则来"通过"。
 - 一个提交做多件事；提交信息写 `update` / `fix bug` / `小改动`。
 - 新增 `.cmd` / `.bat`，或在脚本、钩子、CI 里调用 `cmd.exe`、`powershell.exe`。
 - 在根目录放白名单之外的文件（尤其临时笔记、分析报告、`NOTES.md`）。

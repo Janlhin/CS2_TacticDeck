@@ -108,8 +108,8 @@ Invoke-Step 'layout/root-whitelist' {
     $allowed = @(
         'README.md', 'AGENTS.md', 'DECISIONS.md', 'TASKS.md', 'MANIFEST.md',
         'LICENSE', 'CHANGELOG.md', 'NOTICE',
-        'package.json', 'package-lock.json',
-        '.gitignore', '.gitattributes', '.editorconfig', '.npmrc', '.nvmrc', '.env.example',
+        'package.json', 'deno.json', 'deno.lock',
+        '.gitignore', '.gitattributes', '.editorconfig', '.npmrc', '.deno-version', '.env.example',
         'commitlint.config.mjs', 'tsconfig.json', 'eslint.config.mjs', 'vitest.config.mjs', 'playwright.config.mjs',
         '.github', '.husky', '.vscode', 'CODEOWNERS',
         'index.html', 'vite.config.ts', 'tsconfig.json', 'sass.config.json',
@@ -142,19 +142,19 @@ Invoke-Step 'docs/format' {
 
 # ---------------------------------------------------------------- 7. 文档 lint
 Invoke-Step 'docs/lint' {
-    $bin = Join-Path $repo 'node_modules/.bin/markdownlint-cli2.cmd'
-    if (-not (Test-Path -LiteralPath $bin)) { Fail '未安装 markdownlint-cli2（先运行 npm ci）' }
-    & $bin --config (Join-Path $repo 'config/markdownlint-cli2.jsonc') 'README.md' 'AGENTS.md' 'DECISIONS.md' 'TASKS.md' 'MANIFEST.md' 'docs/*.md'
+    $entry = Join-Path $repo 'node_modules/markdownlint-cli2/markdownlint-cli2.mjs'
+    if (-not (Test-Path -LiteralPath $entry)) { Fail '未安装 markdownlint-cli2（先运行 deno install）' }
+    & deno run -A $entry --config (Join-Path $repo 'config/markdownlint-cli2.jsonc') 'README.md' 'AGENTS.md' 'DECISIONS.md' 'TASKS.md' 'MANIFEST.md' 'docs/*.md'
     if ($LASTEXITCODE -ne 0) { Fail "markdownlint-cli2 退出码 $LASTEXITCODE" }
     '零告警'
 }
 
 # ---------------------------------------------------------------- 8. 内部链接与锚点
 Invoke-Step 'docs/links-internal' {
-    $bin = Join-Path $repo 'node_modules/.bin/remark.cmd'
-    if (-not (Test-Path -LiteralPath $bin)) { Fail '未安装 remark-cli（先运行 npm ci）' }
+    $entry = Join-Path $repo 'node_modules/remark-cli/cli.js'
+    if (-not (Test-Path -LiteralPath $entry)) { Fail '未安装 remark-cli（先运行 deno install）' }
     $targets = @('README.md', 'AGENTS.md', 'DECISIONS.md', 'TASKS.md', 'MANIFEST.md', 'docs/engineering-standards.md', 'docs/third-party-notices.md')
-    $out = & $bin --frail --quiet --use remark-validate-links @targets 2>&1
+    $out = & deno run -A $entry --frail --quiet --use remark-validate-links @targets 2>&1
     $text = ($out | Out-String).Trim()
     # remark-cli 在部分环境下即使有 warning 也返回 0，因此以输出内容为准
     if ($LASTEXITCODE -ne 0 -or $text -match 'missing-heading|Cannot find|missing-file') {
@@ -166,9 +166,9 @@ Invoke-Step 'docs/links-internal' {
 # ---------------------------------------------------------------- 9. 外链
 if (-not $NoExternal) {
     Invoke-Step 'docs/links-external' {
-        $bin = Join-Path $repo 'node_modules/.bin/markdown-link-check.cmd'
-        if (-not (Test-Path -LiteralPath $bin)) { Fail '未安装 markdown-link-check（先运行 npm ci）' }
-        & $bin --config (Join-Path $repo 'config/markdown-link-check.json') 'README.md' 'docs/third-party-notices.md'
+        $entry = Join-Path $repo 'node_modules/markdown-link-check/markdown-link-check'
+        if (-not (Test-Path -LiteralPath $entry)) { Fail '未安装 markdown-link-check（先运行 deno install）' }
+        & deno run -A $entry --config (Join-Path $repo 'config/markdown-link-check.json') 'README.md' 'docs/third-party-notices.md'
         if ($LASTEXITCODE -ne 0) { Fail "markdown-link-check 退出码 $LASTEXITCODE" }
         '外链可达'
     }
@@ -183,7 +183,7 @@ if (-not $NoDocCommands) {
         if ($blocks.Count -eq 0) { Fail 'README 无 powershell 代码块' }
         foreach ($b in $blocks) {
             $cmd = $b.Groups[1].Value.Trim()
-            if ($cmd -match 'npm run verify') { continue }   # 递归入口，由外层 verify 自身保证
+            if ($cmd -match 'deno task verify') { continue }   # 递归入口，由外层 verify 自身保证
             Push-Location -LiteralPath $repo
             try {
                 $out = & pwsh -NoLogo -NoProfile -Command $cmd 2>&1
@@ -206,18 +206,21 @@ Invoke-Step 'version/semver' {
     "版本 $v"
 }
 
-# ---------------------------------------------------------------- 11b. Node 版本
-Invoke-Step 'toolchain/node' {
-    $nvmrc = Join-Path $repo '.nvmrc'
-    if (-not (Test-Path -LiteralPath $nvmrc)) { Fail '缺少 .nvmrc' }
-    $want = (Get-Content -LiteralPath $nvmrc -Raw).Trim()
-    $node = Get-Command node -ErrorAction SilentlyContinue
-    if (-not $node) { Fail 'PATH 中找不到 node' }
-    $got = (& node -v 2>$null).Trim().TrimStart('v')
-    if ($got -ne $want) {
-        Fail "Node 版本不符：.nvmrc=$want，实际=$got（$($node.Source)）。把 $($want) 放到 PATH 前面再重试"
+# ---------------------------------------------------------------- 11b. Deno 版本
+Invoke-Step 'toolchain/deno' {
+    $pin = Join-Path $repo '.deno-version'
+    if (-not (Test-Path -LiteralPath $pin)) { Fail '缺少 .deno-version' }
+    $want = (Get-Content -LiteralPath $pin -Raw).Trim()
+    $deno = Get-Command deno -ErrorAction SilentlyContinue
+    if (-not $deno) { Fail 'PATH 中找不到 deno' }
+    $line = (& deno --version 2>$null | Select-Object -First 1)
+    if (-not $line) { Fail 'deno --version 无输出' }
+    $got = ($line -split '\s+')[1]
+    $gotBase = ($got -split '\+')[0]
+    if ($gotBase -ne $want) {
+        Fail "Deno 版本不符：.deno-version=$want，实际=$gotBase（$($deno.Source)）"
     }
-    "Node $got，与 .nvmrc 一致（$($node.Source)）"
+    "Deno $got，与 .deno-version 一致（$($deno.Source)）"
 }
 
 # ---------------------------------------------------------------- 12. Rust
@@ -254,5 +257,5 @@ if ($script:Failures.Count -gt 0) {
     $script:Failures | ForEach-Object { Write-Host "  - $_" }
     exit 1
 }
-Write-Host 'PASS  全部检查通过（唯一验收入口 npm run verify）'
+Write-Host 'PASS  全部检查通过（唯一验收入口 deno task verify）'
 exit 0

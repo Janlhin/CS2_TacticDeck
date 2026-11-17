@@ -21,7 +21,7 @@
 | 流水线 | GitHub Actions（权威判定） | 强制 |
 | 文档 | `markdownlint-cli2` + `remark-validate-links` + `markdown-link-check` | 强制 |
 
-**唯一入口**：`npm run verify`。它失败就不得提交；禁止 `--no-verify`、注释测试、放宽容错规则。
+**唯一入口**：`deno task verify`。它失败就不得提交；禁止 `--no-verify`、注释测试、放宽容错规则。
 
 ## 文档先行
 
@@ -85,7 +85,7 @@
 
 根目录按白名单，子目录按判据。
 
-根目录允许：五个文档；包管理与锁文件（`package.json` / `package-lock.json`）；构建与静态检查配置（仅工具默认会读的位置，其余移入 `config/`）；版本与忽略规则（`.nvmrc`、`.gitignore`、`.gitattributes`、`.editorconfig`、`.npmrc`）；协作与平台配置（`.github/`、`.husky/`）；法务与变更记录（`LICENSE`、`CHANGELOG.md`）。此外 `docs/`、`scripts/`、`crates/`、`apps/` 作为承载实现与规范的子目录。
+根目录允许：五个文档；包管理与锁文件（`package.json` / `deno.json` / `deno.lock`）；构建与静态检查配置（仅工具默认会读的位置，其余移入 `config/`）；版本与忽略规则（`.deno-version`、`.gitignore`、`.gitattributes`、`.editorconfig`、`.npmrc`）；协作与平台配置（`.github/`、`.husky/`）；法务与变更记录（`LICENSE`、`CHANGELOG.md`）。此外 `docs/`、`scripts/`、`crates/`、`apps/` 作为承载实现与规范的子目录。
 
 **白名单之外新增根目录条目必须先询问并获批准，不得先放后报**；批准后补两件事：写入 `README.md` 的目录结构字段、在 `DECISIONS.md` 写明理由。
 

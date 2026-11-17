@@ -3,7 +3,7 @@
 **本地优先的 CS2 多 POV 战术复盘工作台。**
 左侧 N 路 POV 视频、中间 2D 战术画布（轨迹 · 道具 · 手绘标注）、底部回合与 tick 双时间轴——三者由同一个 tick 时钟焊在一起，点谁看谁。素材不出本机，断网可用。
 
-当前版本 `0.1.0`（初始开发阶段，公共 API 不稳定）。**已落地可运行骨架**：React 19 + PixiJS 8 的前端、Tauri 2 + Rust 的后端壳，`npm run app:dev` 可起窗口；demo 解析与播放尚未接入。
+当前版本 `0.1.0`（初始开发阶段，公共 API 不稳定）。**已落地可运行骨架**：React 19 + PixiJS 8 的前端、Tauri 2 + Rust 的后端壳，`deno task app:dev` 可起窗口；demo 解析与播放尚未接入。
 
 ## 它解决什么
 
@@ -18,7 +18,7 @@
 
 | 目标 | 判据 | 命令 | 期望退出码 |
 |---|---|---|---|
-| 仓库门禁 | 文档结构、字段、链接、根目录白名单、脚本基线全部通过 | `npm run verify` | 0 |
+| 仓库门禁 | 文档结构、字段、链接、根目录白名单、脚本基线全部通过 | `deno task verify` | 0 |
 | G1 2D 回放 | 任意 `de_*` demo 打开到首帧 ≤ 8 s；拖拽 60 fps；点位与游戏内一致 | `cargo run -p tacticdeck-probe -- --demo <file> --check-coords` | 0 |
 | G2 多 POV 同步 | 拖时间轴时 N 路视频与 2D 偏差 < 100 ms；连续 3 分钟漂移 < 300 ms | `cargo run -p tacticdeck-probe -- --sync-test <session>` | 0 |
 | G3 批量录制 | 一个回合 → N 路对齐视频；每路首帧同 tick（±2）；耗时 ≤ 6× 回合时长 | `cargo run -p tacticdeck-record -- --round <n>` | 0 |
@@ -42,8 +42,7 @@ G1–G4 的命令属于规划中的二进制，当前尚未存在（见「已知
 | 样式 | Sass（SCSS） | 1.108.2 | `package.json` |
 | 3D 渲染（M2） | Three.js | 未引入（M2 接入） | 计划 |
 | 标注层（S3） | Konva | 未引入（S3 接入） | 计划 |
-| 包管理器 | npm | 11.20.0 | `package-lock.json` + `package.json` 的 `engines` |
-| Node 运行时 | Node.js | 26.13.0 | `.nvmrc`（`verify` 的 `toolchain/node` 步骤比对） |
+| 包管理与工具链 | Deno | 2.9.8 | `deno.json` + `deno.lock` + `.deno-version`（`verify` 的 `toolchain/deno` 步骤比对） |
 | 脚本运行时 | PowerShell | 7.6.4（要求 ≥ 7.4） | `scripts/*.ps1` 的 `#requires` |
 | demo 解析（主） | `source2-demo` crate | 0.5.11（S0 引入） | 计划 |
 | demo 解析（备） | `@laihoe/demoparser2` | 未引入（S0 兜底） | 计划 |
@@ -73,25 +72,26 @@ G1–G4 的命令属于规划中的二进制，当前尚未存在（见「已知
 
 ## 安装与运行
 
-前置：PowerShell 7.4+、Node.js 26.13.0（版本见 `.nvmrc`）、Rust 1.99（后续构建阶段才需要）。先克隆 `https://github.com/Janlhin/CS2_TacticDeck.git` 并进入目录。
+前置：PowerShell 7.4+、Deno 2.9.8（版本见 `.deno-version`）、Rust 1.99（后续构建阶段才需要）。先克隆 `https://github.com/Janlhin/CS2_TacticDeck.git` 并进入目录。
 
-机器上若存在多个 Node（例如某些工具自带运行时并排在 PATH 前面），把 Node 26 放到 PATH 最前；`npm run verify` 的 `toolchain/node` 步骤会在版本不符时直接失败并打印实际解析到的 `node.exe` 路径。`.npmrc` 已设 `engine-strict=true`，装依赖时同样会拦。
+前端依赖由 Deno 安装与运行，**不需要 Node.js**：`deno install` 读取 `package.json` 生成 `deno.lock` 与 `node_modules`，所有 npm 工具（Vite / TypeScript / Tauri CLI / commitlint / 文档检查）都由 `deno run -A` 驱动对应入口文件。若机器上 `deno` 版本与 `.deno-version` 不符，`verify` 的 `toolchain/deno` 步骤会直接失败并打印实际解析到的路径。
 
-安装依赖（一次性）：
+安装依赖（一次性，同时装提交钩子）：
 
 ```powershell
-npm ci
+deno install --frozen
+deno task hooks
 ```
 
 验收：
 
 ```powershell
-npm run verify
+deno task verify
 ```
 
-`npm run verify` 是**唯一验收入口**：它串起文档结构、字段、链接、根目录白名单、脚本基线，以及 `src-tauri/Cargo.toml` 存在时的 `cargo fmt` / `clippy` / `test`。它失败就不得提交，禁止绕过。
+`deno task verify` 是**唯一验收入口**：它串起文档结构、字段、链接、根目录白名单、脚本基线，以及 `src-tauri/Cargo.toml` 存在时的 `cargo fmt` / `clippy` / `test`。它失败就不得提交，禁止绕过。
 
-起窗口：`npm run app:dev`（需要 WebView2 运行时，Win10/11 默认自带）；只调前端样式可先跑 `npm run dev` 在浏览器里看。打包：`npm run app:build`（当前 `bundle.active` 为 `false`，只产出可执行文件，不做安装包）。
+起窗口：`deno task app:dev`（需要 WebView2 运行时，Win10/11 默认自带）；只调前端样式可先跑 `deno task dev` 在浏览器里看。打包：`deno task app:build`（当前 `bundle.active` 为 `false`，只产出可执行文件，不做安装包）。
 
 ## 已知限制
 
@@ -143,7 +143,7 @@ npm run verify
 - **[advancedfx/advancedfx](https://github.com/advancedfx/advancedfx)**（HLAE，MIT，**子模块另有许可**）——demo 相机控制与逐 tick 命令的事实标准；录制时序的四条硬规则，多数是它的使用者用失败换来的。
 - **[akiver/cs-demo-manager](https://github.com/akiver/cs-demo-manager)**（MIT）——demo 库、2D 雷达、`spec_player` 驱动与录制 shim 的参考。
 - **[Rovniy/cs2-highlights-maker](https://github.com/Rovniy/cs2-highlights-maker)**——"HLAE 作外壳、按 tick 精确执行命令、帧直通 FFmpeg"的编排范本。
-- **[LiteReplay](https://www.xiaoheihe.cn/app/bbs/link/196995653)**（作者 Yuzi_L，MIT）——录制引擎源码是抓屏层的起点：DXGI 抓屏、NVENC/AMF 参数、WASAPI 环回与时间戳对齐、`.partial` 原子提交。
+- **[LiteReplay](https://github.com/MikaW21/LiteReplay)**（作者 MikaW21 / Yuzi_L，MIT）——录制引擎源码是抓屏层的起点：DXGI 抓屏、NVENC/AMF 参数、WASAPI 环回与时间戳对齐、`.partial` 原子提交。上游仓库已公开，本地快照与其 `fc23672` 逐字节一致。
 - **[ravy.pro · From a demo file to a highlight reel](https://ravy.pro/blogs/from-a-demo-file-to-a-highlight-reel-a-cs2-tool-i-always-wanted)**——把整条流水线讲清楚的一手记录。
 
 ### 前端与渲染
