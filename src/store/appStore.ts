@@ -1,57 +1,81 @@
 import { create } from 'zustand';
-
-export type ViewKind = 'overview' | 'player';
-export type Team = 'none' | 't' | 'ct';
-
-export type ViewSlot = {
-  id: number;
-  label: string;
-  kind: ViewKind;
-  team: Team;
-  /** 已载入的 demo 路径；空串表示该路尚未绑定 */
-  source: string;
-};
-
-const PLAYER_COUNT = 10;
-
-export const OVERVIEW_ID = 0;
-
-const initialViews: ViewSlot[] = [
-  { id: OVERVIEW_ID, label: '2D 总览', kind: 'overview', team: 'none', source: '' },
-  ...Array.from({ length: PLAYER_COUNT }, (_, index): ViewSlot => ({
-    id: index + 1,
-    label: `P${index + 1}`,
-    kind: 'player',
-    team: index < PLAYER_COUNT / 2 ? 't' : 'ct',
-    source: '',
-  })),
-];
+import type { Replay } from '../replay/types.ts';
+import { totalTicks } from '../replay/selectors.ts';
+import {
+  OVERVIEW_ID,
+  buildViews,
+  bindAllSources,
+  loadedCount as countLoaded,
+  rotateView,
+  type ViewSlot,
+} from './rail.ts';
 
 type AppState = {
   views: ViewSlot[];
   activeView: number;
+  replay: Replay | null;
+  /** 当前播放头（tick） */
+  tick: number;
+  playing: boolean;
+  /** 播放倍率：0.5 / 1 / 2 / 4 */
+  speed: number;
   bindSource: (id: number, source: string) => void;
   setActiveView: (id: number) => void;
   rotate: (step: number) => void;
   loadedCount: () => number;
+  loadReplay: (replay: Replay, source: string) => void;
+  seekTick: (tick: number) => void;
+  advance: (deltaMs: number) => void;
+  togglePlay: () => void;
+  setSpeed: (speed: number) => void;
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
-  views: initialViews,
+  views: buildViews(),
   activeView: OVERVIEW_ID,
+  replay: null,
+  tick: 0,
+  playing: false,
+  speed: 1,
+
   bindSource: (id, source) =>
     set((state) => ({
       views: state.views.map((view) => (view.id === id ? { ...view, source } : view)),
     })),
+
   setActiveView: (id) => set({ activeView: id }),
-  rotate: (step) => {
-    const views = get().views.filter((view) => view.kind === 'player');
-    if (views.length === 0) return;
-    const current = get().activeView;
-    const index = views.findIndex((view) => view.id === current);
-    const next = index < 0 ? views[0] : views[(index + step + views.length) % views.length];
-    if (next) set({ activeView: next.id });
+
+  rotate: (step) => set((state) => ({ activeView: rotateView(state.views, state.activeView, step) })),
+
+  loadedCount: () => countLoaded(get().views),
+
+  loadReplay: (replay, source) =>
+    set((state) => ({
+      replay,
+      tick: replay.rounds[0]?.startTick ?? 0,
+      playing: false,
+      views: bindAllSources(state.views, source),
+    })),
+
+  seekTick: (tick) => {
+    const replay = get().replay;
+    if (!replay) return;
+    set({ tick: Math.min(Math.max(0, Math.round(tick)), totalTicks(replay)) });
   },
-  loadedCount: () =>
-    get().views.filter((view) => view.kind === 'player' && view.source !== '').length,
+
+  advance: (deltaMs) => {
+    const { replay, tick, playing, speed } = get();
+    if (!replay || !playing) return;
+    const next = tick + (deltaMs / 1000) * replay.tickRate * speed;
+    const end = totalTicks(replay);
+    if (next >= end) {
+      set({ tick: end, playing: false });
+      return;
+    }
+    set({ tick: next });
+  },
+
+  togglePlay: () => set((state) => ({ playing: !state.playing })),
+
+  setSpeed: (speed) => set({ speed }),
 }));

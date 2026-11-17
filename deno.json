@@ -12,6 +12,7 @@
     "app:build": "deno run -A node_modules/@tauri-apps/cli/tauri.js build",
     "build": "pwsh -NoLogo -NoProfile -File scripts/build.ps1",
     "test": "pwsh -NoLogo -NoProfile -File scripts/test.ps1",
+    "test:web": "deno test -A tests",
     "hooks": "git config core.hooksPath .husky"
   }
 }

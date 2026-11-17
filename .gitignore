@@ -31,6 +31,8 @@ vendor/
 .cache_*/
 replays/
 recordings/
+replay.json
+map-profile.json
 *.partial
 *.log
 

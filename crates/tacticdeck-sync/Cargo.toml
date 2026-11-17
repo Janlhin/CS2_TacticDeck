@@ -1,0 +1,10 @@
+[package]
+name = "tacticdeck-sync"
+version = "0.1.0"
+edition = "2024"
+license = "AGPL-3.0-or-later"
+description = "CS2 战术复盘工作台的播放时钟：tick 主时钟、倍速校正与漂移回归"
+
+[dependencies]
+
+[dev-dependencies]

@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "identifier": "pro.janlhin.cs2tacticdeck",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "deno task dev",
     "devUrl": "http://localhost:5173",
-    "beforeBuildCommand": "npm run build:web",
+    "beforeBuildCommand": "deno task build:web",
     "frontendDist": "../dist"
   },
   "app": {

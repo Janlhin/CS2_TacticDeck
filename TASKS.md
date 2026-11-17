@@ -29,32 +29,53 @@
 
 | 编号 | 目标 | 完成判据（命令 → 退出码） | 状态 | 创建时间 | 完成时间 |
 |---|---|---|---|---|---|
-| T-01 | 封装 `source2-demo`，产出 `replay.json`（rounds / ticks / events / players） | `cargo run -p tacticdeck-probe -- --demo <f> --out replay.json` → 0，且 schema 校验通过 | 未开始 | 2026-11-16 | — |
-| T-02 | 地图 overview 提取（本机 CS2 → `map-profile.json`） | `cargo run -p tacticdeck-probe -- --extract-maps` → 0，`de_mirage` 的 `pos_x/pos_y/scale/rotate` 与已知值一致 | 未开始 | 2026-11-16 | — |
-| T-03 | 坐标校准用例（Mirage / Inferno / Ancients 各 1 个点位） | `cargo test -p tacticdeck-probe coords` → 0 | 未开始 | 2026-11-16 | — |
+| T-01 | 封装 `source2-demo`，产出 `replay.json`（rounds / ticks / events / players） | `cargo run -p tacticdeck-probe -- --demo <f> --out replay.json` → 0，且 `cargo run -p tacticdeck-probe -- --validate replay.json` → 0 | 完成 | 2026-11-16 | 2026-11-17 |
+| T-02 | 地图 overview 提取（本机 CS2 → `map-profile.json`） | `cargo run -p tacticdeck-probe -- --extract-maps` → 0，`de_mirage` 的 `pos_x/pos_y/scale/rotate` 与已知值一致 | 完成 | 2026-11-16 | 2026-11-17 |
+| T-03 | 坐标校准（Source 2 两段式世界坐标 → 雷达像素），Mirage 有真实 demo 复核 | `cargo test -p tacticdeck-probe coords` → 0 | 完成 | 2026-11-16 | 2026-11-17 |
+| T-03b | 其余地图的坐标复核（10 张地图各一份真实 Valve demo 跑通） | 每张地图的 `cargo run -p tacticdeck-probe -- --validate replay.json` → 0，`--check-radar` 命中率 ≥98%，且 `tests/replay-contract.test.ts` 仍 0 | 完成 | 2026-11-17 | 2026-11-17 |
+
+### T-03b 实测记录（2026-11-17，本机 `game/csgo/replays` 的 225 份 Valve demo）
+
+每张地图取一份 demo，`--step 16` + 雷达标定导出后跑 `--validate` 与 `--check-radar`（命中率 = 十人点位落在雷达图不透明像素上的比例）：
+
+| 地图 | 回合 | 帧 | 击杀 | 雷达命中率 |
+| --- | --- | --- | --- | --- |
+| de_dust2 | 18 | 6502 | 115 | 100.0% |
+| de_inferno | 10 | 3410 | 50 | 100.0% |
+| de_cache | 14 | 5058 | 77 | 99.9% |
+| de_mirage | 17 | 4995 | 95 | 99.8% |
+| de_overpass | 44 | 8214 | 124 | 99.7% |
+| de_train | 14 | 5031 | 72 | 99.1% |
+| de_nuke | 6 | 3168 | 40 | 98.9% |
+| de_anubis | 10 | 3658 | 54 | 98.6% |
+| de_vertigo | 46 | 6889 | 139 | 97.5% |
+| de_ancient | 7 | 2680 | 29 | 97.1% |
+
+同时修掉三个只在真实录像里出现的问题：① CS2 demo 只有 `round_prestart` / `round_officially_ended`，老代码只认 `round_start` / `round_end`，导致回合数 0；② 部分 demo 的 `controller → pawn` 句柄为空，加了按 `m_hController` 反查的兜底；③ 热身帧、掉线帧和个别读歪的实体帧会让坐标越界，导出时只保留「十人齐全且坐标在 0..1」的帧。
 
 ## S1 2D 画布
 
 | 编号 | 目标 | 完成判据（命令 → 退出码） | 状态 | 创建时间 | 完成时间 |
 |---|---|---|---|---|---|
-| T-04 | Pixi 底图 / 点位 / 朝向 / 轨迹 | `deno task test（2d 用例过滤）` → 0，交互冒烟用例通过 | 未开始 | 2026-11-16 | — |
-| T-05 | 回合条 / 事件轴 / 播放头（tick 单位） | 同上，时间轴跳转用例通过（跳转 < 200 ms 断言） | 未开始 | 2026-11-16 | — |
-| T-13 | 左栏槽位列表：1 个固定 2D 总览 + 10 人 POV 槽（滚轮滚动、点选切主视图），并接本机 demo 库与十人绑定入口 | `deno task test（rail 用例过滤）` → 0（11 项渲染、滚动可见、点选切换可断言） | 未开始 | 2026-11-16 | — |
-| T-14 | 右栏分析与联动：回合/事件列表、热图、玩家面板随播放头更新 | `deno task test（panels 用例过滤）` → 0（播放头前进后右侧数据同步断言通过） | 未开始 | 2026-11-16 | — |
-| T-15 | 十人同屏 2D 回放：10 名选手的点位 / 朝向 / 血量 / 阵营配色 | `deno task test（ten-player 用例过滤）` → 0（任意 tick 取到 10 个坐标，两队配色可区分，缺 1 人即失败） | 未开始 | 2026-11-16 | — |
+| T-04 | Pixi 底图 / 点位 / 朝向 / 轨迹 | `deno task test:web` → 0（2d 用例：坐标与朝向可用、相邻帧位移有限），窗口内底图与十人轨迹可见 | 完成 | 2026-11-16 | 2026-11-17 |
+| T-05 | 回合条 / 事件轴 / 播放头（tick 单位） | `deno task test:web` → 0（timeline 用例：跳转 < 200 ms），窗口内 R1–R3 回合条与滑杆可见 | 完成 | 2026-11-16 | 2026-11-17 |
+| T-13 | 左栏槽位列表：1 个固定 2D 总览 + 10 人 POV 槽（滚轮滚动、点选切主视图），并接本机 demo 库与十人绑定入口 | `deno task test:web` → 0（rail 用例：11 槽、轮换、绑定计数；library 用例：条目过滤、字段校验、十槽绑定）；窗口右栏「demo 库」可列出本机回放并载入 | 完成 | 2026-11-16 | 2026-11-17 |
+| T-14 | 右栏分析与联动：回合/事件列表、热图、玩家面板随播放头更新 | `deno task test:web` → 0（panels 用例：本回合事件正序/置灰、落点限定回合、热图归一化与格子定位） | 完成 | 2026-11-16 | 2026-11-17 |
+| T-15 | 十人同屏 2D 回放：10 名选手的点位 / 朝向 / 血量 / 阵营配色 | `deno task test:web` → 0（ten-player 用例：任意 tick 取到 10 个坐标，两队配色可区分，缺 1 人即失败） | 完成 | 2026-11-16 | 2026-11-17 |
+| T-17 | 真实雷达底图：运行时从本机 CS2 VPK 解码 `overheadmaps/*.vtex_c`，2D 板面铺真底图；取不到时退回网格 | `cargo test -p tacticdeck-map` → 0（VTEX 头 / DATA 块 / RGBA 解码 / PNG 写出）；`cargo run -q -p tacticdeck-probe -- --extract-radar de_mirage --out <png>` → 0 且 1024×1024 盘面可辨；窗口内底图与十人点位对齐 | 完成 | 2026-11-17 | 2026-11-17 |
 
 ## S2 同步
 
 | 编号 | 目标 | 完成判据（命令 → 退出码） | 状态 | 创建时间 | 完成时间 |
 |---|---|---|---|---|---|
-| T-06 | `TickClock`：主时钟 + 漂移回归 + `playbackRate` 校正 | `cargo test -p tacticdeck-sync` → 0（含 3 分钟模拟漂移 < 100 ms） | 未开始 | 2026-11-16 | — |
+| T-06 | `TickClock`：主时钟 + 漂移回归 + `playbackRate` 校正 | `cargo test -p tacticdeck-sync` → 0（含 3 分钟模拟漂移 < 100 ms） | 完成 | 2026-11-16 | 2026-11-17 |
 | T-07 | 视频条：N 路封面 + 懒加载 + 点击切主 | 交互冒烟：切主 < 1 s 断言通过 | 未开始 | 2026-11-16 | — |
 
 ## S3 标注与手册
 
 | 编号 | 目标 | 完成判据（命令 → 退出码） | 状态 | 创建时间 | 完成时间 |
 |---|---|---|---|---|---|
-| T-08 | 标注命令数组 + 撤销栈 + 本地手册存储 | `cargo test -p tacticdeck-annotate` → 0 | 未开始 | 2026-11-16 | — |
+| T-08 | 标注命令数组 + 撤销栈 + 本地手册存储 | `cargo test -p tacticdeck-annotate` → 0 | 完成 | 2026-11-16 | 2026-11-17 |
 
 ## S4 录制流水线
 

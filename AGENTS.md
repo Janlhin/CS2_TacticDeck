@@ -12,6 +12,7 @@
 | 快速验收（不查外链） | `deno task verify:fast` |
 | 文档专项（不跑 Rust） | `deno task docs:check` |
 | 前端类型检查 | `deno task typecheck` |
+| 前端逻辑测试 | `deno task test:web` |
 | 前端开发服务器 | `deno task dev` |
 | 桌面应用（开发态） | `deno task app:dev` |
 | 桌面应用打包 | `deno task app:build` |
