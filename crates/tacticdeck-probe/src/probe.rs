@@ -17,6 +17,16 @@ fn event_bool(ge: &GameEvent, key: &str) -> Option<bool> {
 /// 一帧里的一行原始数据：槽位、世界 x、世界 y、朝向、血量、是否存活
 pub type RawRow = (u8, f32, f32, f32, i32, bool);
 
+/// Source 2 格子边长（Hammer 单位）：2^9
+pub const CELL_SIZE: f32 = 512.0;
+/// 世界可寻址范围的一半：格子网格从 -WORLD_HALF 开始
+pub const WORLD_HALF: f32 = 16384.0;
+
+/// 把「格子编号 + 格内偏移」还原成世界坐标：cell * CELL_SIZE - WORLD_HALF + offset
+pub fn cell_to_world(cell: u16, offset: f32) -> f32 {
+    f32::from(cell) * CELL_SIZE - WORLD_HALF + offset
+}
+
 /// 花名册里的一名选手：控制器实体序号 → 槽位
 #[derive(Clone)]
 struct Roster {
@@ -145,8 +155,10 @@ impl Probe {
             let angles: [f32; 3] =
                 try_property!(pawn, [f32; 3], "m_angEyeAngles").unwrap_or([0.0, 0.0, 0.0]);
 
-            let world_x = f32::from(cell_x) * 1024.0 + vec_x;
-            let world_y = f32::from(cell_y) * 1024.0 + vec_y;
+            // Source 2 的世界坐标是「格子 + 格内偏移」两段式存的：格子边长 512，
+            // 世界原点在 -16384（格子网格以世界原点为中心）。少了这一步坐标会整体偏掉。
+            let world_x = cell_to_world(cell_x, vec_x);
+            let world_y = cell_to_world(cell_y, vec_y);
             self.last_pos
                 .insert(member.slot, (world_x, world_y, angles[1]));
             row.push((
@@ -284,5 +296,22 @@ impl Observer for Probe {
                 .unwrap_or(last.start_tick);
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{cell_to_world, CELL_SIZE, WORLD_HALF};
+
+    /// 校准用例：Source 2 的格子边长与世界原点必须是 512 / 16384
+    #[test]
+    fn coords_cell_to_world_matches_source2_grid() {
+        assert_eq!(CELL_SIZE, 512.0);
+        assert_eq!(WORLD_HALF, 16384.0);
+        // 实测：tick 3200 槽位 1 读到 cellX=30 vecX=223、cellY=30 vecY=367
+        assert!((cell_to_world(30, 223.0) - -801.0).abs() < 0.001);
+        assert!((cell_to_world(30, 367.0) - -657.0).abs() < 0.001);
+        // 负格子也要能还原（世界原点左侧的区域）
+        assert!((cell_to_world(0, 100.0) - -16284.0).abs() < 0.001);
     }
 }

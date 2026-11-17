@@ -290,4 +290,21 @@ mod tests {
         let (x, y) = profile.world_to_norm(profile.pos_x, profile.pos_y);
         assert!(x.abs() < 0.001 && (y - 1.0).abs() < 0.001);
     }
+
+    /// 校准用例：真实 demo（tick 72 出生帧）的世界坐标必须落到雷达图上的出生点位置
+    ///
+    /// 参考值来自 `data/radar_info/de_mirage.txt`：TSpawn (0.87, 0.36)、CTSpawn (0.28, 0.70)，
+    /// 其中 y 以图片**底部**为原点，换算成像素（以左上角为原点、1024 边长）是
+    /// T ≈ (891, 655)、CT ≈ (287, 307)。容差 40 像素，够容纳出生点散布。
+    #[test]
+    fn coords_spawn_points_land_on_radar() {
+        let profile = parse_overview(MIRAGE, "de_mirage").unwrap();
+        // 世界坐标由 cell_to_world 还原后实测（tick 72）：T 侧槽位 1、CT 侧槽位 6
+        let (px, py) = profile.world_to_pixel(1378.0, -1487.0);
+        assert!((px - 891.0).abs() < 40.0, "T 出生点 x 像素 {px}");
+        assert!((py - 655.0).abs() < 40.0, "T 出生点 y 像素 {py}");
+        let (px, py) = profile.world_to_pixel(-1970.5, 294.8);
+        assert!((px - 287.0).abs() < 40.0, "CT 出生点 x 像素 {px}");
+        assert!((py - 307.0).abs() < 40.0, "CT 出生点 y 像素 {py}");
+    }
 }

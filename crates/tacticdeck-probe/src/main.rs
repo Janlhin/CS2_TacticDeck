@@ -166,9 +166,7 @@ fn run() -> Result<()> {
         eprintln!("地图 {map_name} 没有标定参数，退回包围盒归一化");
     }
     if profile.is_some() {
-        eprintln!(
-            "注意：CS2 世界坐标带每地图偏移，雷达映射尚未校准（T-03），坐标可能越界；校验会拦下"
-        );
+        eprintln!("坐标换算走雷达标定（pos_x / pos_y / scale）");
     }
     let frames = build_frames(&probe, profile);
     let bounds = probe.bounds.unwrap_or([0.0, 0.0, 1.0, 1.0]);
