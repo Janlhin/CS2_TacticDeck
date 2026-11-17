@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { EventFeed } from './components/EventFeed.tsx';
+import { HeatPanel } from './components/HeatPanel.tsx';
 import { ReplayBoard } from './components/ReplayBoard.tsx';
 import { RosterPanel } from './components/RosterPanel.tsx';
 import { Timeline } from './components/Timeline.tsx';
-import { buildSampleReplay } from './replay/fixture';
-import { aliveCount, formatSeconds, killsUpTo, roundAt, tickToSeconds } from './replay/selectors';
-import { useAppStore } from './store/appStore';
+import { buildSampleReplay } from './replay/fixture.ts';
+import { aliveCount, formatSeconds, killsUpTo, roundAt, tickToSeconds } from './replay/selectors.ts';
+import { useAppStore } from './store/appStore.ts';
 
 type AppInfo = {
   name: string;
@@ -213,14 +215,15 @@ export default function App() {
             <h2>事件</h2>
             {latestKill ? (
               <p className="kill-line">
-                P{latestKill.killer} → P{latestKill.victim}
+                最近一击 P{latestKill.killer} → P{latestKill.victim}
                 {latestKill.headshot ? ' · 爆头' : ''}
                 <span className="kill-tick">tick {latestKill.tick}</span>
               </p>
             ) : (
               <p className="hint">当前播放头之前没有击杀。</p>
             )}
-            <p className="hint">本回合累计 {kills.length} 次击杀。</p>
+            {replay ? <EventFeed replay={replay} tick={tick} onSeek={seekTick} /> : null}
+            <p className="hint">本回合累计 {kills.length} 次击杀 · 点击任一行跳到该 tick</p>
           </section>
 
           <section className="panel panel-grow">
@@ -230,6 +233,11 @@ export default function App() {
             ) : (
               <p className="hint">未载入回放。</p>
             )}
+          </section>
+
+          <section className="panel">
+            <h2>热图</h2>
+            {replay ? <HeatPanel replay={replay} tick={tick} /> : <p className="hint">未载入回放。</p>}
           </section>
         </aside>
       </main>

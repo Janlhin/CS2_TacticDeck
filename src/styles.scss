@@ -256,6 +256,7 @@ body {
   flex-direction: column;
   gap: 12px;
   min-height: 0;
+  overflow-y: auto;
 }
 
 .panel {
@@ -429,7 +430,7 @@ body {
 /* ---- 右栏十人状态 ---- */
 .panel-grow {
   flex: 1;
-  min-height: 0;
+  min-height: 330px;
   display: flex;
   flex-direction: column;
 }
@@ -527,4 +528,83 @@ body {
 .kill-tick {
   color: var(--muted);
   font-size: 11px;
+}
+
+/* ---- 右栏事件列表 ---- */
+.event-feed {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 120px;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: 3px;
+    background: #2d4a66;
+  }
+}
+
+.event-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--line);
+    background: rgba(76, 154, 255, 0.08);
+  }
+
+  &.is-future {
+    color: var(--muted);
+    opacity: 0.62;
+  }
+}
+
+.event-time {
+  min-width: 42px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.event-text {
+  flex: 1;
+}
+
+.event-tick {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- 右栏热图 ---- */
+.heat-panel {
+  margin-top: 4px;
+}
+
+.heat-grid {
+  display: grid;
+  gap: 2px;
+  aspect-ratio: 3 / 1;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #0c1117;
+}
+
+.heat-cell {
+  border-radius: 2px;
+  background: #141c26;
 }

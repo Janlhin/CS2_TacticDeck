@@ -107,3 +107,79 @@ export function seekTick(replay: Replay, tick: number): Frame | null {
   const clamped = Math.min(Math.max(0, tick), totalTicks(replay));
   return frameAt(replay, clamped);
 }
+
+export type RoundEventRow = {
+  event: KillEvent;
+  /** 相对本回合起点的秒数 */
+  elapsed: number;
+  /** 是否已过播放头 */
+  passed: boolean;
+};
+
+/** 当前回合事件列表：按时间正序，未到的事件也列出（置灰），便于回看"接下来会死谁" */
+export function roundEvents(replay: Replay, tick: number): RoundEventRow[] {
+  const round = roundAt(replay, tick);
+  if (!round) return [];
+  return replay.events
+    .filter((event) => event.tick >= round.startTick && event.tick <= round.endTick)
+    .sort((a, b) => a.tick - b.tick)
+    .map((event) => ({
+      event,
+      elapsed: (event.tick - round.startTick) / replay.tickRate,
+      passed: event.tick <= tick,
+    }));
+}
+
+export type KillSpot = {
+  tick: number;
+  victim: number;
+  x: number;
+  y: number;
+};
+
+/** 击杀落点：被杀者死亡瞬间的坐标；scope=round 只看当前回合 */
+export function killSpots(replay: Replay, tick: number, scope: 'round' | 'all' = 'round'): KillSpot[] {
+  const round = roundAt(replay, tick);
+  const spots: KillSpot[] = [];
+  for (const event of replay.events) {
+    if (event.tick > tick) continue;
+    if (scope === 'round' && (!round || event.tick < round.startTick || event.tick > round.endTick)) continue;
+    const frame = frameAt(replay, event.tick);
+    const victim = frame?.players.find((player) => player.slot === event.victim);
+    if (!victim) continue;
+    spots.push({ tick: event.tick, victim: event.victim, x: victim.x, y: victim.y });
+  }
+  return spots;
+}
+
+export type HeatCell = {
+  col: number;
+  row: number;
+  count: number;
+  /** 0..1 相对热度，最热格为 1 */
+  level: number;
+};
+
+/**
+ * 落点聚合成 cols×rows 网格。行号自上而下（与板面翻转 y 轴后的视觉一致），
+ * 这样把热图贴到地图上时位置不会上下颠倒。
+ */
+export function heatGrid(spots: KillSpot[], cols: number, rows: number): HeatCell[] {
+  const counts = new Array<number>(cols * rows).fill(0);
+  for (const spot of spots) {
+    const col = Math.min(cols - 1, Math.max(0, Math.floor(spot.x * cols)));
+    const row = Math.min(rows - 1, Math.max(0, Math.floor((1 - spot.y) * rows)));
+    const index = row * cols + col;
+    counts[index] = (counts[index] ?? 0) + 1;
+  }
+  const max = counts.reduce((best, value) => (value > best ? value : best), 0);
+
+  const cells: HeatCell[] = [];
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      const count = counts[row * cols + col] ?? 0;
+      cells.push({ col, row, count, level: max > 0 ? count / max : 0 });
+    }
+  }
+  return cells;
+}
