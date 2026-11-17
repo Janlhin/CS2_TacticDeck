@@ -48,6 +48,7 @@ G1–G4 的命令属于规划中的二进制，当前尚未存在（见「已知
 | 地图标定（雷达） | 本机 CS2 `pak01_dir.vpk` 内 `resource/overviews/*.txt` | 运行时提取（T-02） | `crates/tacticdeck-map/src/map_profile.rs` |
 | 雷达底图 | 本机 CS2 `pak01_dir.vpk` 内 `panorama/images/overheadmaps/*.vtex_c` | 运行时解码，不随包分发（T-17） | `crates/tacticdeck-map/src/radar.rs` |
 | 播放时钟 | 自研 `tacticdeck-sync` crate | 0.1.0（T-06：tick 主时钟 + 倍速校正 + 3 分钟漂移回归 < 100 ms） | `crates/tacticdeck-sync/src/clock.rs` |
+| 标注模型 | 自研 `tacticdeck-annotate` crate | 0.1.0（T-08：命令数组 + 撤销/重做栈 + 手册 JSON 落盘） | `crates/tacticdeck-annotate/src/manual.rs` |
 | demo 解析（备） | `@laihoe/demoparser2` | 未引入（S0 兜底） | 计划 |
 | 视频编码 | FFmpeg（仅 nvenc / amf / mf + aac） | 随抓屏器 | 运行时探测 |
 
@@ -72,7 +73,7 @@ G1–G4 的命令属于规划中的二进制，当前尚未存在（见「已知
 | `crates/` | Rust 侧共享库与二进制：`tacticdeck-probe`（demo → `replay.json`，T-01）、后续的同步算法与录制编排 |
 | `src/` | 前端源码：`App.tsx`、`components/`、`store/`、`styles.scss` |
 | `src-tauri/` | Tauri 2 壳：`src/lib.rs` 命令层、`tauri.conf.json`、`capabilities/` |
-| `Cargo.toml` / `Cargo.lock` | 根 workspace：成员 `src-tauri` 与 `crates/tacticdeck-{probe,map,sync}`，锁文件随根目录走 |
+| `Cargo.toml` / `Cargo.lock` | 根 workspace：成员 `src-tauri` 与 `crates/tacticdeck-{probe,map,sync,annotate}`，锁文件随根目录走 |
 
 ## 安装与运行
 

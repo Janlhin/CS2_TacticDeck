@@ -4,6 +4,7 @@ members = [
     "crates/tacticdeck-probe",
     "crates/tacticdeck-map",
     "crates/tacticdeck-sync",
+    "crates/tacticdeck-annotate",
 ]
 resolver = "3"
 

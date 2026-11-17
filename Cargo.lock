@@ -3588,6 +3588,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tacticdeck-annotate"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "tacticdeck-map"
 version = "0.1.0"
 dependencies = [
