@@ -3,7 +3,7 @@
 **本地优先的 CS2 多 POV 战术复盘工作台。**
 左侧 N 路 POV 视频、中间 2D 战术画布（轨迹 · 道具 · 手绘标注）、底部回合与 tick 双时间轴——三者由同一个 tick 时钟焊在一起，点谁看谁。素材不出本机，断网可用。
 
-当前版本 `0.1.0`（初始开发阶段，公共 API 不稳定）。**已落地可运行骨架**：React 19 + PixiJS 8 的前端、Tauri 2 + Rust 的后端壳，`deno task app:dev` 可起窗口；demo 解析与播放尚未接入。
+当前版本 `0.1.0`（初始开发阶段，公共 API 不稳定）。**已落地可运行骨架 + demo 解析链路**：React 19 + PixiJS 8 的前端、Tauri 2 + Rust 的后端壳，`deno task app:dev` 可起窗口；`crates/tacticdeck-probe` 已能把真实 `.dem` 导成 `replay.json`（S0 / T-01）。前端目前仍吃内置 fixture，本机 demo 库入口与十人绑定界面待 T-13。
 
 ## 它解决什么
 
@@ -19,7 +19,7 @@
 | 目标 | 判据 | 命令 | 期望退出码 |
 |---|---|---|---|
 | 仓库门禁 | 文档结构、字段、链接、根目录白名单、脚本基线全部通过 | `deno task verify` | 0 |
-| G1 2D 回放 | 任意 `de_*` demo 打开到首帧 ≤ 8 s；拖拽 60 fps；点位与游戏内一致 | `cargo run -p tacticdeck-probe -- --demo <file> --check-coords` | 0 |
+| G1 2D 回放 | 任意 `de_*` demo 能导成 `replay.json` 并通过结构校验；地图校准后点位与游戏内一致 | `cargo run -p tacticdeck-probe -- --demo <file> --out replay.json` → 0，随后 `cargo run -p tacticdeck-probe -- --validate replay.json` → 0 | 0 |
 | G2 多 POV 同步 | 拖时间轴时 N 路视频与 2D 偏差 < 100 ms；连续 3 分钟漂移 < 300 ms | `cargo run -p tacticdeck-probe -- --sync-test <session>` | 0 |
 | G3 批量录制 | 一个回合 → N 路对齐视频；每路首帧同 tick（±2）；耗时 ≤ 6× 回合时长 | `cargo run -p tacticdeck-record -- --round <n>` | 0 |
 | G4 标注与手册 | 标注可存、可载、可导出 PDF | `cargo test -p tacticdeck-annotate` | 0 |
@@ -32,7 +32,7 @@ G1–G4 的命令属于规划中的二进制，当前尚未存在（见「已知
 
 | 项 | 选型 | 版本 | 版本载体 |
 |---|---|---|---|
-| 语言（后端） | Rust | 1.99.1（`edition 2024`） | `src-tauri/Cargo.toml` |
+| 语言（后端） | Rust | 1.99.1（`edition 2024`） | 根 `Cargo.toml` 的 `[workspace.package]` + `src-tauri/Cargo.toml` |
 | 语言（前端） | TypeScript（`strict` 全开） | 7.0.2 | `package.json` + `tsconfig.json` |
 | 桌面壳 | Tauri | 2.12.5（stable；3.x 仍在 alpha） | `src-tauri/Cargo.toml` + `src-tauri/tauri.conf.json` |
 | 前端框架 | React | 19.3.1 | `package.json` |
@@ -44,7 +44,7 @@ G1–G4 的命令属于规划中的二进制，当前尚未存在（见「已知
 | 标注层（S3） | Konva | 未引入（S3 接入） | 计划 |
 | 包管理与工具链 | Deno | 2.9.8 | `deno.json` + `deno.lock` + `.deno-version`（`verify` 的 `toolchain/deno` 步骤比对） |
 | 脚本运行时 | PowerShell | 7.6.4（要求 ≥ 7.4） | `scripts/*.ps1` 的 `#requires` |
-| demo 解析（主） | `source2-demo` crate | 0.5.11（S0 引入） | 计划 |
+| demo 解析（主） | `source2-demo` crate | 0.5.11（已接入，T-01） | `crates/tacticdeck-probe/Cargo.toml` |
 | demo 解析（备） | `@laihoe/demoparser2` | 未引入（S0 兜底） | 计划 |
 | 视频编码 | FFmpeg（仅 nvenc / amf / mf + aac） | 随抓屏器 | 运行时探测 |
 
@@ -66,9 +66,10 @@ G1–G4 的命令属于规划中的二进制，当前尚未存在（见「已知
 | `config/` | 工具配置：Markdown 校验、链接检查、提交信息规则 |
 | `.github/` | CI：每次推送与 PR 运行 `verify` |
 | `.husky/` | 提交门禁薄壳（仅转发到 `scripts/hooks/*.ps1`） |
-| `crates/` | Rust 侧共享库：解析、录制编排、同步算法（S0 起按需建立） |
+| `crates/` | Rust 侧共享库与二进制：`tacticdeck-probe`（demo → `replay.json`，T-01）、后续的同步算法与录制编排 |
 | `src/` | 前端源码：`App.tsx`、`components/`、`store/`、`styles.scss` |
 | `src-tauri/` | Tauri 2 壳：`src/lib.rs` 命令层、`tauri.conf.json`、`capabilities/` |
+| `Cargo.toml` / `Cargo.lock` | 根 workspace：成员 `src-tauri` 与 `crates/tacticdeck-probe`，锁文件随根目录走 |
 
 ## 安装与运行
 
@@ -95,14 +96,25 @@ deno task verify
 deno task test:web
 ```
 
-`deno task verify` 是**唯一验收入口**：它串起文档结构、字段、链接、根目录白名单、脚本基线，以及 `src-tauri/Cargo.toml` 存在时的 `cargo fmt` / `clippy` / `test`。它失败就不得提交，禁止绕过。
+`deno task verify` 是**唯一验收入口**：它串起文档结构、字段、链接、根目录白名单、脚本基线，以及根 `Cargo.toml` 存在时的 `cargo fmt` / `clippy` / `test`（按 `--workspace` 跑全部 crate）。它失败就不得提交，禁止绕过。
+
+### demo 导出（S0 / T-01）
+
+`crates/tacticdeck-probe` 是独立二进制，不吃前端依赖，直接 `cargo run -p tacticdeck-probe -- …`：
+
+- `--demo <file.dem>` + `--out <replay.json>`：解析 demo 并写出前端契约格式；`--step <n>` 控制采样间隔（默认 8 tick）。
+- `--validate <replay.json>`：只读校验，检查 10 名选手、槽位连续、帧 tick 递增、坐标落在 0..1、回合起止与击杀槽位合法。
+
+坐标口径：Source 2 把世界坐标拆成 `cell`（1024 单位一格）与 `vec` 余数，两者拼成 `cell * 1024 + vec`；导出时按等比例包围盒压到 0..1 并翻转 y 轴（板面左下为原点）。地图雷达校准（`pos_x` / `pos_y` / `scale` / `rotate`）仍是 T-02，落成后替换这套临时归一化。
+
+真实 demo 实测（`test_demo.dem`，de_mirage，64 tick）：10 回合、6575 帧、48 条击杀、10 名选手、5 MB 单文件。`replay.json` 属运行数据，已进 `.gitignore`；`tests/replay-contract.test.ts` 在本地存在该文件时才跑契约回归，缺失则跳过。
 
 起窗口：`deno task app:dev`（需要 WebView2 运行时，Win10/11 默认自带）；只调前端样式可先跑 `deno task dev` 在浏览器里看。打包：`deno task app:build`（当前 `bundle.active` 为 `false`，只产出可执行文件，不做安装包）。
 
 ## 已知限制
 
-- **只到骨架**：窗口、布局、左栏 11 槽（1 固定 2D + 10 人）、槽位状态层、Pixi 网格可跑；demo 解析、播放、同步、录制均未接入。下表 G1–G4 的命令是待实现的契约，不是现状。
-- **盘面是占位**：`RadarCanvas` 只画网格，等地图校准（`pos_x` / `pos_y` / `scale` / `rotate`）接入后替换。
+- **只到骨架 + 解析**：窗口、布局、左栏 11 槽（1 固定 2D + 10 人）、槽位状态层、Pixi 网格可跑；`.dem → replay.json` 已能产出真实数据。但**前端还没接导入入口**：界面里跑的是内置 fixture，要换成真实数据得等 T-13 的本机 demo 库。播放 / 同步 / 录制仍未接入，下表 G2–G4 的命令是待实现的契约。
+- **盘面是占位**：`RadarCanvas` 只画网格；`replay.json` 现在是包围盒归一化，等地图校准（`pos_x` / `pos_y` / `scale` / `rotate`，T-02）接入后换成雷达坐标。
 - **平台**：只支持 Windows x64（抓屏依赖 DXGI）。
 - **录制依赖外部工具**：HLAE 官方声明其为"技术意义上的 hack"，仅可用于看 demo 与制作视频。本项目只在离线 demo 模式调用，**绝不接入受 VAC 保护的服务器**。
 - **图形局限**：只支持 SDR；不支持旋转屏；独占全屏可能抓不到；多实例需自行加锁。
@@ -122,8 +134,8 @@ deno task test:web
 | 阶段 | 内容 | 交付物 | 状态 |
 |---|---|---|---|
 | **S-0** | 技术栈骨架 | Tauri 2 壳 + React 19 前端 + Pixi 画布占位 | 完成（2026-11-16） |
-| **S0** | 解析 + 地图校准 | `dem → replay.json` CLI | 未开始 |
-| **S1** | 2D 画布 | 可拖拽 2D 回放页 | 未开始 |
+| **S0** | 解析 + 地图校准 | `dem → replay.json` CLI | 进行中（T-01 完成，T-02 / T-03 未开始） |
+| **S1** | 2D 画布 | 可拖拽 2D 回放页 | 进行中（T-04 / T-05 / T-14 / T-15 完成，T-13 进行中） |
 | **S2** | 视频条 + 同步 | 视频 / 2D 同屏 | 未开始 |
 | **S3** | 标注 + 手册 | 标注层、本地手册 | 未开始 |
 | **S4** | 批量录制 | `record-round` 子命令 | 未开始 |
