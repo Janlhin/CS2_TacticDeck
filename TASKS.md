@@ -32,7 +32,26 @@
 | T-01 | 封装 `source2-demo`，产出 `replay.json`（rounds / ticks / events / players） | `cargo run -p tacticdeck-probe -- --demo <f> --out replay.json` → 0，且 `cargo run -p tacticdeck-probe -- --validate replay.json` → 0 | 完成 | 2026-11-16 | 2026-11-17 |
 | T-02 | 地图 overview 提取（本机 CS2 → `map-profile.json`） | `cargo run -p tacticdeck-probe -- --extract-maps` → 0，`de_mirage` 的 `pos_x/pos_y/scale/rotate` 与已知值一致 | 完成 | 2026-11-16 | 2026-11-17 |
 | T-03 | 坐标校准（Source 2 两段式世界坐标 → 雷达像素），Mirage 有真实 demo 复核 | `cargo test -p tacticdeck-probe coords` → 0 | 完成 | 2026-11-16 | 2026-11-17 |
-| T-03b | 其余地图的坐标复核（Inferno / Ancient / Dust2 各一份 demo 跑通） | 每张地图的 `cargo run -p tacticdeck-probe -- --validate replay.json` → 0，且 `tests/replay-contract.test.ts` 仍 0 | 未开始 | 2026-11-17 | — |
+| T-03b | 其余地图的坐标复核（10 张地图各一份真实 Valve demo 跑通） | 每张地图的 `cargo run -p tacticdeck-probe -- --validate replay.json` → 0，`--check-radar` 命中率 ≥98%，且 `tests/replay-contract.test.ts` 仍 0 | 完成 | 2026-11-17 | 2026-11-17 |
+
+### T-03b 实测记录（2026-11-17，本机 `game/csgo/replays` 的 225 份 Valve demo）
+
+每张地图取一份 demo，`--step 16` + 雷达标定导出后跑 `--validate` 与 `--check-radar`（命中率 = 十人点位落在雷达图不透明像素上的比例）：
+
+| 地图 | 回合 | 帧 | 击杀 | 雷达命中率 |
+| --- | --- | --- | --- | --- |
+| de_dust2 | 18 | 6502 | 115 | 100.0% |
+| de_inferno | 10 | 3410 | 50 | 100.0% |
+| de_cache | 14 | 5058 | 77 | 99.9% |
+| de_mirage | 17 | 4995 | 95 | 99.8% |
+| de_overpass | 44 | 8214 | 124 | 99.7% |
+| de_train | 14 | 5031 | 72 | 99.1% |
+| de_nuke | 6 | 3168 | 40 | 98.9% |
+| de_anubis | 10 | 3658 | 54 | 98.6% |
+| de_vertigo | 46 | 6889 | 139 | 97.5% |
+| de_ancient | 7 | 2680 | 29 | 97.1% |
+
+同时修掉三个只在真实录像里出现的问题：① CS2 demo 只有 `round_prestart` / `round_officially_ended`，老代码只认 `round_start` / `round_end`，导致回合数 0；② 部分 demo 的 `controller → pawn` 句柄为空，加了按 `m_hController` 反查的兜底；③ 热身帧、掉线帧和个别读歪的实体帧会让坐标越界，导出时只保留「十人齐全且坐标在 0..1」的帧。
 
 ## S1 2D 画布
 

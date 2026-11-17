@@ -109,6 +109,7 @@ deno task test:web
 - `--extract-maps`（可配 `--cs2 <game/csgo 路径>` 与 `--out <map-profile.json>`）：从本机 CS2 的 `pak01_dir.vpk` 里读 `resource/overviews/*.txt`，抽出每张地图的 `pos_x / pos_y / scale / rotate`。CS2 路径默认按「参数 → `CS2_DIR` → Steam 注册表与 libraryfolders.vdf」的顺序探测。
 - `--map-profile <map-profile.json>`：让导出改用雷达标定换算坐标（`meta.normalize` 变 `radar`），红点直接落在雷达图对应的位置。缺这张图时退回包围盒归一化。
 - `--extract-radar <map>`（可配 `--cs2 <game/csgo 路径>` 与 `--out <file.png>`）：把本机 CS2 里的雷达底图纹理（`panorama/images/overheadmaps/<map>_radar_psd.vtex_c`）解成 1024×1024 PNG，用于肉眼核对底图与坐标是否对齐。
+- `--check-radar <replay.json>`（可配 `--cs2 <game/csgo 路径>`）：把每帧每人的点位投到该地图的雷达底图上，算「落在不透明像素上」的比例；命中率低于 98% 直接报错，用来判断坐标口径是否真的对得上盘面。
 
 坐标口径：Source 2 的世界坐标是「格子 + 格内偏移」两段式存的——格子边长 **512** 单位、世界原点在 **-16384**，还原公式是 `cell * 512 - 16384 + vec`。拿到世界坐标后按地图的 `pos_x / pos_y / scale` 换成雷达像素，再压到 0..1 并把 y 轴翻到左下原点（板面口径）。
 
@@ -116,7 +117,9 @@ deno task test:web
 
 真实 demo 实测（`test_demo.dem`，de_mirage，64 tick）：10 回合、6575 帧、48 条击杀、10 名选手、5 MB 单文件。`replay.json` 属运行数据，已进 `.gitignore`；`tests/replay-contract.test.ts` 在本地存在该文件时才跑契约回归，缺失则跳过。
 
-本机 CS2 实测（`--extract-maps`）：23 张地图，`de_mirage` 抽到 `pos_x=-3230 / pos_y=1713 / scale=5 / rotate=0`，与公开标定值一致。`map-profile.json` 同样是运行数据，不入库。
+本机 CS2 实测（`--extract-maps`）：17 张地图（同图的多份 `_v2 / _night` overview 已按图名归一合并），`de_mirage` 抽到 `pos_x=-3230 / pos_y=1713 / scale=5 / rotate=0`，与公开标定值一致。`map-profile.json` 同样是运行数据，不入库。
+
+真实 Valve 录像实测（10 张地图各一份，`--step 16`）：`--validate` 全部通过，`--check-radar` 命中率 97.1%–100.0%（Dust2 与 Inferno 100.0%、Mirage 99.8%、Vertigo 97.5%、Ancient 97.1%）。CS2 demo 的回合事件是 `round_prestart` / `round_officially_ended`，导出时按这对事件切回合；热身帧、掉线帧和个别读歪的实体帧会被丢掉（只保留十人齐全且坐标在 0..1 的帧）。
 
 本机雷达底图实测（`--extract-radar de_mirage`）：VTEX 1024×1024、format 28（RGBA8888，4 字节/像素）、单 mip、LZ4 压缩，解出 4,194,304 字节像素，写成 271,686 字节 PNG；盘面与十人点位在窗口内对齐。
 
