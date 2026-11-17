@@ -315,3 +315,216 @@ body {
   color: var(--muted);
   font-size: 12px;
 }
+
+/* ---- 2D 回放板面与时间轴 ---- */
+.viewport-split {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.replay-board {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  align-self: stretch;
+  min-height: 200px;
+
+  canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  background: #0c1117;
+}
+
+.timeline-rounds {
+  display: flex;
+  gap: 6px;
+}
+
+.round-chip {
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #0f1620;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+
+  &.is-active {
+    border-color: var(--accent);
+    color: var(--text);
+    background: #101c2c;
+  }
+}
+
+.timeline-scrub {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.play-btn {
+  width: 30px;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #101c2c;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+
+  &:hover {
+    border-color: var(--accent);
+  }
+}
+
+.scrub {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.timeline-time {
+  min-width: 132px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.speed-group {
+  display: flex;
+  gap: 4px;
+}
+
+.speed-btn {
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #0f1620;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+
+  &.is-active {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+}
+
+/* ---- 右栏十人状态 ---- */
+.panel-grow {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.roster {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  min-height: 0;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border-radius: 3px;
+    background: #2d4a66;
+  }
+}
+
+.roster-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 4px;
+  border-bottom: 1px dashed var(--line);
+  font-size: 12px;
+  cursor: pointer;
+
+  &.is-focus {
+    background: #101c2c;
+  }
+
+  &.is-dead {
+    opacity: 0.55;
+  }
+}
+
+.roster-team {
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+}
+
+.roster-slot {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.roster-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roster-hp {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.roster-hp-bar {
+  display: block;
+  width: 54px;
+  height: 6px;
+  border-radius: 3px;
+  background: #1b2733;
+  overflow: hidden;
+}
+
+.roster-hp-fill {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+}
+
+.roster-hp-text {
+  width: 30px;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.kill-line {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.kill-tick {
+  color: var(--muted);
+  font-size: 11px;
+}
