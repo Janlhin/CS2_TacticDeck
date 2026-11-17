@@ -15,7 +15,7 @@ fn event_bool(ge: &GameEvent, key: &str) -> Option<bool> {
 }
 
 /// 一帧里的一行原始数据：槽位、世界 x、世界 y、朝向、血量、是否存活
-type RawRow = (u8, f32, f32, f32, i32, bool);
+pub type RawRow = (u8, f32, f32, f32, i32, bool);
 
 /// 花名册里的一名选手：控制器实体序号 → 槽位
 #[derive(Clone)]
@@ -41,7 +41,6 @@ struct Probe {
     roster: Vec<Roster>,
     rounds: Vec<RoundAcc>,
     current_round: Option<usize>,
-    frames: Vec<Frame>,
     events: Vec<KillEvent>,
     unmapped_kills: u32,
     world_kills: u32,
@@ -273,31 +272,16 @@ impl Observer for Probe {
     }
 
     fn on_stop(&mut self, _ctx: &Context) -> ObserverResult {
-        let [min_x, min_y, max_x, max_y] = self.bounds.unwrap_or([0.0, 0.0, 1.0, 1.0]);
-        // 等比例缩放：两个轴共用同一个跨度，避免把地图拉变形
-        let span = (max_x - min_x).max(max_y - min_y).max(1.0);
-        let center_x = (min_x + max_x) * 0.5;
-        let center_y = (min_y + max_y) * 0.5;
-        for (tick, row) in std::mem::take(&mut self.raw_frames) {
-            let players = row
-                .into_iter()
-                .map(|(slot, x, y, yaw, hp, alive)| PlayerFrame {
-                    slot,
-                    x: 0.5 + (x - center_x) / span,
-                    // 板面 y 轴向上：世界 y 越大越靠下，这里翻转
-                    y: 0.5 - (y - center_y) / span,
-                    dir: yaw,
-                    hp,
-                    alive,
-                })
-                .collect();
-            self.frames.push(Frame { tick, players });
-        }
-        self.frames.sort_by_key(|f| f.tick);
+        // 归一化放到 main 里做：那里才知道有没有地图标定文件
+        self.raw_frames.sort_by_key(|(tick, _)| *tick);
         if let Some(last) = self.rounds.last_mut()
             && last.end_tick == 0
         {
-            last.end_tick = self.frames.last().map(|f| f.tick).unwrap_or(last.start_tick);
+            last.end_tick = self
+                .raw_frames
+                .last()
+                .map(|(tick, _)| *tick)
+                .unwrap_or(last.start_tick);
         }
         Ok(())
     }

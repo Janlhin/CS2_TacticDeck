@@ -7,6 +7,45 @@ use std::io::BufReader;
 include!("schema.rs");
 include!("probe.rs");
 
+mod map_profile;
+mod vpk;
+
+use map_profile::{MapProfile, MapProfiles};
+
+/// 把采到的世界坐标按「地图雷达标定」或「包围盒」压到 0..1
+fn build_frames(probe: &Probe, profile: Option<&MapProfile>) -> Vec<Frame> {
+    let [min_x, min_y, max_x, max_y] = probe.bounds.unwrap_or([0.0, 0.0, 1.0, 1.0]);
+    let span = (max_x - min_x).max(max_y - min_y).max(1.0);
+    let center_x = (min_x + max_x) * 0.5;
+    let center_y = (min_y + max_y) * 0.5;
+
+    probe
+        .raw_frames
+        .iter()
+        .map(|(tick, rows)| Frame {
+            tick: *tick,
+            players: rows
+                .iter()
+                .map(|(slot, x, y, yaw, hp, alive)| {
+                    let (nx, ny) = match profile {
+                        Some(profile) => profile.world_to_norm(*x, *y),
+                        // 没有标定时退化成等比例包围盒：不拉变形，但对不上雷达图
+                        None => (0.5 + (x - center_x) / span, 0.5 - (y - center_y) / span),
+                    };
+                    PlayerFrame {
+                        slot: *slot,
+                        x: nx,
+                        y: ny,
+                        dir: *yaw,
+                        hp: *hp,
+                        alive: *alive,
+                    }
+                })
+                .collect(),
+        })
+        .collect()
+}
+
 fn main() -> Result<()> {
     let handle = std::thread::Builder::new()
         .stack_size(64 * 1024 * 1024)
@@ -25,6 +64,9 @@ fn run() -> Result<()> {
     let mut out: Option<String> = None;
     let mut validate: Option<String> = None;
     let mut step: u32 = 8;
+    let mut extract_maps = false;
+    let mut cs2_dir: Option<String> = None;
+    let mut map_profile_path: Option<String> = None;
 
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
@@ -48,6 +90,15 @@ fn run() -> Result<()> {
                     step = value.parse().context("--step 必须是正整数")?;
                 }
             }
+            "--extract-maps" => extract_maps = true,
+            "--cs2" => {
+                i += 1;
+                cs2_dir = args.get(i).cloned();
+            }
+            "--map-profile" => {
+                i += 1;
+                map_profile_path = args.get(i).cloned();
+            }
             other => anyhow::bail!("未知参数 {other}"),
         }
         i += 1;
@@ -57,7 +108,29 @@ fn run() -> Result<()> {
         return validate_replay(&path);
     }
 
-    let demo = demo.context("缺少 --demo <file.dem>")?;
+    if extract_maps {
+        let cs2 = map_profile::discover_cs2(cs2_dir.as_deref().map(std::path::Path::new))?;
+        let vpk_path = cs2.join("pak01_dir.vpk");
+        println!("CS2 目录：{}", cs2.display());
+        let profiles = map_profile::extract_from_vpk(&vpk_path)?;
+        let out = out.unwrap_or_else(|| "map-profile.json".to_string());
+        let json = serde_json::to_string(&profiles).context("序列化 map-profile.json 失败")?;
+        std::fs::write(&out, json).with_context(|| format!("写 {out} 失败"))?;
+        println!(
+            "地图 {} 张 → {out}（来源 {}）",
+            profiles.maps.len(),
+            profiles.source
+        );
+        if let Some(mirage) = profiles.maps.iter().find(|map| map.map == "de_mirage") {
+            println!(
+                "de_mirage: pos_x={} pos_y={} scale={} rotate={}",
+                mirage.pos_x, mirage.pos_y, mirage.scale, mirage.rotate
+            );
+        }
+        return Ok(());
+    }
+
+    let demo = demo.context("缺少 --demo <file.dem> 或 --extract-maps")?;
     let out = out.context("缺少 --out <replay.json>")?;
 
     let file = File::open(&demo).with_context(|| format!("打开 {demo} 失败"))?;
@@ -72,13 +145,35 @@ fn run() -> Result<()> {
     if probe.roster.is_empty() {
         anyhow::bail!("没有识别到任何选手：demo 可能不是 CS2 比赛录像");
     }
+    let map_name = if probe.map.is_empty() {
+        "unknown".to_string()
+    } else {
+        probe.map.clone()
+    };
+    let profiles = match map_profile_path.as_deref() {
+        Some(path) => Some(
+            serde_json::from_str::<MapProfiles>(
+                &std::fs::read_to_string(path).with_context(|| format!("读 {path} 失败"))?,
+            )
+            .with_context(|| format!("解析 {path} 失败"))?,
+        ),
+        None => None,
+    };
+    let profile = profiles
+        .as_ref()
+        .and_then(|all| all.maps.iter().find(|item| item.map == map_name));
+    if profiles.is_some() && profile.is_none() {
+        eprintln!("地图 {map_name} 没有标定参数，退回包围盒归一化");
+    }
+    if profile.is_some() {
+        eprintln!(
+            "注意：CS2 世界坐标带每地图偏移，雷达映射尚未校准（T-03），坐标可能越界；校验会拦下"
+        );
+    }
+    let frames = build_frames(&probe, profile);
     let bounds = probe.bounds.unwrap_or([0.0, 0.0, 1.0, 1.0]);
     let replay = Replay {
-        map: if probe.map.is_empty() {
-            "unknown".to_string()
-        } else {
-            probe.map.clone()
-        },
+        map: map_name.clone(),
         tick_rate: probe.tick_rate,
         players: probe
             .roster
@@ -100,7 +195,7 @@ fn run() -> Result<()> {
                 winner: r.winner.clone(),
             })
             .collect(),
-        frames: probe.frames.clone(),
+        frames,
         events: {
             let mut events = probe.events.clone();
             events.sort_by_key(|e| e.tick);
@@ -109,7 +204,11 @@ fn run() -> Result<()> {
         meta: ReplayMeta {
             source: demo.clone(),
             tick_step: probe.step,
-            normalize: "bbox-uniform".to_string(),
+            normalize: if profile.is_some() {
+                "radar".to_string()
+            } else {
+                "bbox-uniform".to_string()
+            },
             bounds,
             controllers: probe.roster.len() as u32,
             unmapped_kills: probe.unmapped_kills,
