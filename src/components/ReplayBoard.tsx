@@ -1,6 +1,7 @@
-import { Application, Container, Graphics } from 'pixi.js';
-import { useEffect, useRef } from 'react';
+import { Application, Container, Graphics, Sprite, Texture } from 'pixi.js';
+import { useEffect, useRef, useState } from 'react';
 import { TEAM_COLOR, directionVector, hpColor } from '../replay/geometry.ts';
+import { loadRadarImage } from '../replay/radar.ts';
 import { frameIndexAt } from '../replay/selectors.ts';
 import type { Replay } from '../replay/types.ts';
 
@@ -22,9 +23,27 @@ export function ReplayBoard({ replay, tick, focusSlot }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const appRef = useRef<Application | null>(null);
   const layerRef = useRef<Container | null>(null);
+  const [radar, setRadar] = useState<HTMLImageElement | null>(null);
   // 初始化是异步的，用 ref 保存最新入参，init 完成后补画一帧
-  const latestRef = useRef({ replay, tick, focusSlot });
-  latestRef.current = { replay, tick, focusSlot };
+  const latestRef = useRef({ replay, tick, focusSlot, radar });
+  latestRef.current = { replay, tick, focusSlot, radar };
+
+  // 换地图就换底图；取不到就留在网格上
+  useEffect(() => {
+    let cancelled = false;
+    setRadar(null);
+    void loadRadarImage(replay.map).then((url) => {
+      if (cancelled || !url) return;
+      const image = new Image();
+      image.onload = () => {
+        if (!cancelled) setRadar(image);
+      };
+      image.src = url;
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [replay.map]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -60,8 +79,9 @@ export function ReplayBoard({ replay, tick, focusSlot }: Props) {
       const height = Math.max(1, Math.round(host.clientHeight));
       app.renderer.resize(width, height);
 
-      const { replay: currentReplay, tick: currentTick, focusSlot: currentFocus } = latestRef.current;
-      paint(app, layer, currentReplay, currentTick, currentFocus);
+      const { replay: currentReplay, tick: currentTick, focusSlot: currentFocus, radar: currentRadar } =
+        latestRef.current;
+      paint(app, layer, currentReplay, currentTick, currentFocus, currentRadar);
     };
 
     void boot();
@@ -80,8 +100,8 @@ export function ReplayBoard({ replay, tick, focusSlot }: Props) {
     const app = appRef.current;
     const layer = layerRef.current;
     if (!app || !layer) return;
-    paint(app, layer, replay, tick, focusSlot);
-  }, [replay, tick, focusSlot]);
+    paint(app, layer, replay, tick, focusSlot, radar);
+  }, [replay, tick, focusSlot, radar]);
 
   // 窗口尺寸变化后画布会被拉伸，需要按新尺寸重画
   useEffect(() => {
@@ -95,7 +115,7 @@ export function ReplayBoard({ replay, tick, focusSlot }: Props) {
       const height = Math.max(1, Math.round(host.clientHeight));
       app.renderer.resize(width, height);
       const latest = latestRef.current;
-      paint(app, layer, latest.replay, latest.tick, latest.focusSlot);
+      paint(app, layer, latest.replay, latest.tick, latest.focusSlot, latest.radar);
     });
     observer.observe(host);
     return () => observer.disconnect();
@@ -104,53 +124,72 @@ export function ReplayBoard({ replay, tick, focusSlot }: Props) {
   return <div className="replay-board" ref={hostRef} aria-label="2D 回放板面" data-tick={Math.round(tick)} />;
 }
 
-function paint(app: Application, layer: Container, replay: Replay, tick: number, focusSlot: number) {
+function paint(
+  app: Application,
+  layer: Container,
+  replay: Replay,
+  tick: number,
+  focusSlot: number,
+  radar: HTMLImageElement | null,
+) {
   layer.removeChildren().forEach((child) => child.destroy());
 
   const width = app.screen.width;
   const height = app.screen.height;
   if (width < 32 || height < 32) return;
 
+  // 雷达图是正方形：按短边取一个居中的方块，人点与底图共用同一套换算
+  const box = Math.min(width, height) - 2 * PAD;
+  const left = (width - box) * 0.5;
+  const top = (height - box) * 0.5;
+
   const toPx = (x: number, y: number) => ({
-    px: PAD + x * (width - 2 * PAD),
-    py: PAD + (1 - y) * (height - 2 * PAD),
+    px: left + x * box,
+    py: top + (1 - y) * box,
   });
 
   const base = new Graphics();
   base.roundRect(0, 0, width, height, 6).fill({ color: 0x0c1117, alpha: 1 });
   layer.addChild(base);
 
+  // 有真实底图就铺底图，没有就退回网格 + 包点占位框
+  if (radar) {
+    const sprite = new Sprite(Texture.from(radar));
+    sprite.x = left;
+    sprite.y = top;
+    sprite.width = box;
+    sprite.height = box;
+    layer.addChild(sprite);
+  } else {
+    const grid = new Graphics();
+    const step = Math.max(22, Math.round(box / 14));
+    for (let px = left; px <= left + box + 0.5; px += step) {
+      grid.moveTo(px, top).lineTo(px, top + box);
+    }
+    for (let py = top; py <= top + box + 0.5; py += step) {
+      grid.moveTo(left, py).lineTo(left + box, py);
+    }
+    grid.stroke({ width: 1, color: 0x24303f, alpha: 0.55 });
+    layer.addChild(grid);
+
+    const sites = new Graphics();
+    for (const site of [
+      { x: 0.66, y: 0.26, color: 0xd29922 },
+      { x: 0.18, y: 0.18, color: 0x4c9aff },
+    ]) {
+      const a = toPx(site.x, site.y);
+      const b = toPx(site.x + 0.16, site.y + 0.14);
+      sites.rect(a.px, a.py, b.px - a.px, b.py - a.py).fill({ color: site.color, alpha: 0.07 });
+      sites
+        .rect(a.px, a.py, b.px - a.px, b.py - a.py)
+        .stroke({ width: 1, color: site.color, alpha: 0.35 });
+    }
+    layer.addChild(sites);
+  }
+
   const border = new Graphics();
-  border
-    .roundRect(PAD, PAD, width - 2 * PAD, height - 2 * PAD, 4)
-    .stroke({ width: 1, color: 0x24303f, alpha: 1 });
+  border.roundRect(left, top, box, box, 4).stroke({ width: 1, color: 0x24303f, alpha: 1 });
   layer.addChild(border);
-
-  const grid = new Graphics();
-  const step = Math.max(22, Math.round((width - 2 * PAD) / 14));
-  for (let px = PAD; px <= width - PAD + 0.5; px += step) {
-    grid.moveTo(px, PAD).lineTo(px, height - PAD);
-  }
-  for (let py = PAD; py <= height - PAD + 0.5; py += step) {
-    grid.moveTo(PAD, py).lineTo(width - PAD, py);
-  }
-  grid.stroke({ width: 1, color: 0x24303f, alpha: 0.55 });
-  layer.addChild(grid);
-
-  // 两个包点占位框（等地图标定后换成真实包点轮廓）
-  const sites = new Graphics();
-  for (const site of [
-    { x: 0.66, y: 0.26, color: 0xd29922 },
-    { x: 0.18, y: 0.18, color: 0x4c9aff },
-  ]) {
-    const a = toPx(site.x, site.y);
-    const b = toPx(site.x + 0.16, site.y + 0.14);
-    sites.rect(a.px, a.py, b.px - a.px, b.py - a.py).fill({ color: site.color, alpha: 0.07 });
-    sites
-      .rect(a.px, a.py, b.px - a.px, b.py - a.py)
-      .stroke({ width: 1, color: site.color, alpha: 0.35 });
-  }
-  layer.addChild(sites);
 
   const index = frameIndexAt(replay, tick);
   if (index < 0) return;
