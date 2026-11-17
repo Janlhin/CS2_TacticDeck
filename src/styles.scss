@@ -289,6 +289,71 @@ body {
   font-size: 12px;
 }
 
+/* ---- 本机 demo 库 ---- */
+.library-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 168px;
+  overflow-y: auto;
+
+  li {
+    list-style: none;
+  }
+}
+
+.library-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover:enabled {
+    border-color: var(--accent);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  &.is-loaded {
+    border-color: var(--accent);
+    background: var(--panel-2, rgba(127, 127, 127, 0.08));
+  }
+}
+
+.library-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.library-meta {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.link-button {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 .kv {
   margin: 0;
   padding: 0;

@@ -5,8 +5,18 @@ import { ReplayBoard } from './components/ReplayBoard.tsx';
 import { RosterPanel } from './components/RosterPanel.tsx';
 import { Timeline } from './components/Timeline.tsx';
 import { buildSampleReplay } from './replay/fixture.ts';
+import {
+  entryLabel,
+  firstReplay,
+  isTauriRuntime,
+  isUsableEntry,
+  listLibrary,
+  readReplay,
+  type LibraryEntry,
+} from './replay/library.ts';
 import { aliveCount, formatSeconds, killsUpTo, roundAt, tickToSeconds } from './replay/selectors.ts';
 import { useAppStore } from './store/appStore.ts';
+import { OVERVIEW_ID } from './store/rail.ts';
 
 type AppInfo = {
   name: string;
@@ -16,8 +26,9 @@ type AppInfo = {
 
 const BUILD_INFO: AppInfo = { name: 'CS2 TacticDeck', version: '0.1.0', pov_slots: 10 };
 
-function isTauriRuntime(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+function errorText(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
 }
 
 export default function App() {
@@ -38,6 +49,9 @@ export default function App() {
 
   const [info, setInfo] = useState<AppInfo>(BUILD_INFO);
   const [bridge, setBridge] = useState<'pending' | 'ok' | 'browser'>('pending');
+  const [library, setLibrary] = useState<LibraryEntry[]>([]);
+  const [libraryNote, setLibraryNote] = useState<string | null>(null);
+  const [loadedPath, setLoadedPath] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -52,12 +66,61 @@ export default function App() {
     })();
   }, []);
 
-  // 样本回放：真实解析（T-01）落地前先用合成数据把 2D 链路打通
+  // 启动装载：有本机回放就先吃真实数据，否则退回合成样本把链路点亮
   useEffect(() => {
     if (useAppStore.getState().replay) return;
-    const sample = buildSampleReplay();
-    loadReplay(sample, `${sample.map}#sample`);
+    const fallback = () => {
+      const sample = buildSampleReplay();
+      loadReplay(sample, `${sample.map}#sample`);
+    };
+    if (!isTauriRuntime()) {
+      fallback();
+      return;
+    }
+    void (async () => {
+      try {
+        const entries = await listLibrary();
+        setLibrary(entries);
+        const first = firstReplay(entries);
+        if (!first) {
+          setLibraryNote('没扫到回放：把 replay.json 放进 文档/CS2_TacticDeck/demos 再重新扫描。');
+          fallback();
+          return;
+        }
+        loadReplay(await readReplay(first.path), first.path);
+        setLoadedPath(first.path);
+      } catch (error) {
+        setLibraryNote(`读库失败：${errorText(error)}`);
+        fallback();
+      }
+    })();
   }, [loadReplay]);
+
+  const refreshLibrary = async () => {
+    if (!isTauriRuntime()) {
+      setLibraryNote('浏览器预览下没有 Rust 桥，读不到本机文件。');
+      return;
+    }
+    try {
+      const entries = await listLibrary();
+      setLibrary(entries);
+      setLibraryNote(entries.length === 0 ? '没扫到回放或 demo。' : null);
+    } catch (error) {
+      setLibraryNote(`读库失败：${errorText(error)}`);
+    }
+  };
+
+  const openEntry = async (entry: LibraryEntry) => {
+    try {
+      const next = await readReplay(entry.path);
+      loadReplay(next, entry.path);
+      setLoadedPath(entry.path);
+      setActiveView(OVERVIEW_ID);
+      setLibraryNote(null);
+    } catch (error) {
+      setLibraryNote(`载入失败：${errorText(error)}`);
+    }
+  };
 
   // 播放循环：requestAnimationFrame 驱动 store 里的 tick
   useEffect(() => {
@@ -188,6 +251,37 @@ export default function App() {
 
         <aside className="sidebar">
           <section className="panel">
+            <h2>demo 库</h2>
+            {library.length === 0 ? (
+              <p className="hint">库里还没有条目。</p>
+            ) : (
+              <ul className="library-list">
+                {library.map((entry) => (
+                  <li key={entry.path}>
+                    <button
+                      type="button"
+                      className={`library-item${loadedPath === entry.path ? ' is-loaded' : ''}`}
+                      disabled={!isUsableEntry(entry)}
+                      onClick={() => void openEntry(entry)}
+                      title={entry.path}
+                    >
+                      <span className="library-name">{entry.name}</span>
+                      <span className="library-meta">{entryLabel(entry)}</span>
+                      {!isUsableEntry(entry) ? (
+                        <span className="library-meta">待导出：probe --demo … --out replay.json</span>
+                      ) : null}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button type="button" className="link-button" onClick={() => void refreshLibrary()}>
+              重新扫描
+            </button>
+            {libraryNote ? <p className="hint">{libraryNote}</p> : null}
+          </section>
+
+          <section className="panel">
             <h2>复盘参数</h2>
             <ul className="kv">
               <li>
@@ -243,7 +337,13 @@ export default function App() {
       </main>
 
       <footer className="statusbar">
-        <span>2D 回放已接入合成样本（3 回合 · 十人）；真实 demo 解析待 T-01</span>
+        <span>
+          {replay
+            ? `${replay.map} · ${replay.rounds.length} 回合 · ${replay.players.length} 人${
+                replay.meta ? ` · ${replay.meta.normalize}` : ' · 合成样本'
+              }`
+            : '未载入回放'}
+        </span>
         <span className="sep">|</span>
         <span>验收口径 deno task verify</span>
         <span className="sep">|</span>

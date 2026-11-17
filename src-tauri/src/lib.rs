@@ -1,5 +1,7 @@
 use serde::Serialize;
 
+mod library;
+
 #[derive(Debug, Serialize)]
 pub struct AppInfo {
     pub name: String,
@@ -23,10 +25,26 @@ fn get_app_info() -> AppInfo {
     app_info()
 }
 
+/// 本机 demo 库列表；给 `dir` 就只扫那一个目录
+#[tauri::command]
+fn list_replays(dir: Option<String>) -> Vec<library::LibraryEntry> {
+    library::list(dir.as_deref().map(std::path::Path::new))
+}
+
+/// 读一份已导出的 replay.json
+#[tauri::command]
+fn load_replay(path: String) -> Result<serde_json::Value, String> {
+    library::read_replay(std::path::Path::new(&path))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![get_app_info])
+        .invoke_handler(tauri::generate_handler![
+            get_app_info,
+            list_replays,
+            load_replay
+        ])
         .run(tauri::generate_context!())
         .expect("Tauri 启动失败");
 }
