@@ -35,6 +35,11 @@ pub fn default_dirs() -> Vec<PathBuf> {
     if let Ok(cwd) = std::env::current_dir() {
         dirs.push(cwd);
     }
+    // dev 构建时 Tauri 进程的工作目录常常是 `src-tauri`，再补上仓库根
+    dirs.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")));
+    if let Some(root) = Path::new(env!("CARGO_MANIFEST_DIR")).parent() {
+        dirs.push(root.to_path_buf());
+    }
     dirs
 }
 
