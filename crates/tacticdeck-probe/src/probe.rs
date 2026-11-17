@@ -59,6 +59,8 @@ struct Probe {
     bounds: Option<[f32; 4]>,
     /// 采样得到的原始世界坐标，等解析完拿到全局包围盒再归一化
     raw_frames: Vec<(u32, Vec<RawRow>)>,
+    /// 调试用：只打印第一次见到的事件名
+    seen_events: Vec<String>,
 }
 
 impl Probe {
@@ -103,6 +105,10 @@ impl Probe {
         }
         t_side.sort_by_key(|e| e.0);
         ct_side.sort_by_key(|e| e.0);
+        if std::env::var("TACTICDECK_DEBUG_ROSTER").is_ok() {
+            eprintln!("T 侧 {} 人：{:?}", t_side.len(), t_side);
+            eprintln!("CT 侧 {} 人：{:?}", ct_side.len(), ct_side);
+        }
 
         for (offset, (key, name, team)) in t_side
             .into_iter()
@@ -122,7 +128,9 @@ impl Probe {
     }
 
     fn sample(&mut self, ctx: &Context) {
-        let mut row = Vec::with_capacity(10);        for member in &self.roster {
+        let roster = self.roster.clone();
+        let mut row = Vec::with_capacity(10);
+        for member in &roster {
             let Some(controller) = ctx
                 .entities()
                 .iter()
@@ -131,47 +139,37 @@ impl Probe {
                 continue;
             };
             let pawn_handle: u32 = try_property!(controller, u32, "m_hPlayerPawn").unwrap_or(0);
-            let Ok(pawn) = ctx.entities().get_by_handle(pawn_handle as usize) else {
+            // 个别 demo 的 controller→pawn 句柄是空的（例如某两名选手整局都没绑定上），
+            // 退一步扫 pawn 实体，用它的 m_hController 反查回这名控制器
+            let pawn = ctx
+                .entities()
+                .get_by_handle(pawn_handle as usize)
+                .ok()
+                .or_else(|| find_pawn_by_controller(ctx, member.controller_key));
+            let Some(pawn) = pawn else {
                 // 角色实体解绑（一般是已经阵亡），沿用最后已知位置
                 if let Some((x, y, dir)) = self.last_pos.get(&member.slot).copied() {
                     row.push((member.slot, x, y, dir, 0, false));
                 }
                 continue;
             };
-            let cell_x: u16 =
-                try_property!(pawn, u16, "CBodyComponent.m_skeletonInstance.m_vecOrigin.m_cellX")
-                    .unwrap_or_default();
-            let vec_x: f32 =
-                try_property!(pawn, f32, "CBodyComponent.m_skeletonInstance.m_vecOrigin.m_vecX")
-                    .unwrap_or_default();
-            let cell_y: u16 =
-                try_property!(pawn, u16, "CBodyComponent.m_skeletonInstance.m_vecOrigin.m_cellY")
-                    .unwrap_or_default();
-            let vec_y: f32 =
-                try_property!(pawn, f32, "CBodyComponent.m_skeletonInstance.m_vecOrigin.m_vecY")
-                    .unwrap_or_default();
-            let hp: i32 = try_property!(pawn, i32, "m_iHealth").unwrap_or(0);
-            let life: u8 = try_property!(pawn, u8, "m_lifeState").unwrap_or(0);
-            let angles: [f32; 3] =
-                try_property!(pawn, [f32; 3], "m_angEyeAngles").unwrap_or([0.0, 0.0, 0.0]);
-
-            // Source 2 的世界坐标是「格子 + 格内偏移」两段式存的：格子边长 512，
-            // 世界原点在 -16384（格子网格以世界原点为中心）。少了这一步坐标会整体偏掉。
-            let world_x = cell_to_world(cell_x, vec_x);
-            let world_y = cell_to_world(cell_y, vec_y);
+        let (world_x, world_y, yaw, hp, alive) = match std::panic::catch_unwind(
+            std::panic::AssertUnwindSafe(|| read_pawn(pawn)),
+        ) {
+            Ok(values) => values,
+            // 某个字段在这个 demo 里读不通：这一帧跳过这名选手，别把整个解析线程带崩
+            Err(_) => continue,
+        };
             self.last_pos
-                .insert(member.slot, (world_x, world_y, angles[1]));
-            row.push((
-                member.slot,
-                world_x,
-                world_y,
-                angles[1],
-                hp,
-                life == 0 && hp > 0,
-            ));
+                .insert(member.slot, (world_x, world_y, yaw));
+            row.push((member.slot, world_x, world_y, yaw, hp, alive));
         }
         if row.is_empty() {
             return;
+        }
+        if row.len() != 10 && std::env::var("TACTICDECK_DEBUG_ROWS").is_ok() {
+            let have: Vec<u8> = row.iter().map(|(slot, ..)| *slot).collect();
+            eprintln!("tick {} 只有 {} 人：{have:?}", ctx.tick(), row.len());
         }
         let bounds = self.bounds.get_or_insert([f32::MAX, f32::MAX, f32::MIN, f32::MIN]);
         for (_, x, y, _, _, _) in &row {
@@ -182,6 +180,57 @@ impl Probe {
         }
         self.raw_frames.push((ctx.tick(), row));
     }
+}
+
+/// 从 pawn 实体读出世界坐标、朝向、血量、存活与否
+fn read_pawn(pawn: &Entity) -> (f32, f32, f32, i32, bool) {
+    let cell_x: u16 =
+        try_property!(pawn, u16, "CBodyComponent.m_skeletonInstance.m_vecOrigin.m_cellX")
+            .unwrap_or_default();
+    let vec_x: f32 =
+        try_property!(pawn, f32, "CBodyComponent.m_skeletonInstance.m_vecOrigin.m_vecX")
+            .unwrap_or_default();
+    let cell_y: u16 =
+        try_property!(pawn, u16, "CBodyComponent.m_skeletonInstance.m_vecOrigin.m_cellY")
+            .unwrap_or_default();
+    let vec_y: f32 =
+        try_property!(pawn, f32, "CBodyComponent.m_skeletonInstance.m_vecOrigin.m_vecY")
+            .unwrap_or_default();
+    let hp: i32 = try_property!(pawn, i32, "m_iHealth").unwrap_or(0);
+    let life: u8 = try_property!(pawn, u8, "m_lifeState").unwrap_or(0);
+    let angles: [f32; 3] =
+        try_property!(pawn, [f32; 3], "m_angEyeAngles").unwrap_or([0.0, 0.0, 0.0]);
+
+    // Source 2 的世界坐标是「格子 + 格内偏移」两段式存的：格子边长 512，
+    // 世界原点在 -16384（格子网格以世界原点为中心）。少了这一步坐标会整体偏掉。
+    let world_x = cell_to_world(cell_x, vec_x);
+    let world_y = cell_to_world(cell_y, vec_y);
+    (world_x, world_y, angles[1], hp, life == 0 && hp > 0)
+}
+
+/// 实体句柄低 14 位才是实体序号
+fn handle_entity_index(handle: u32) -> usize {
+    (handle as usize) & 0x3fff
+}
+
+/// 扫全场的 player pawn，找出 `m_hController` 指向这名控制器的那个
+///
+/// 不同版本的 demo 里 pawn 的字段名不完全一致，缺字段时上游库会 panic，
+/// 所以这里把单次属性读取包进 `catch_unwind`，读不到就当它不是目标。
+fn find_pawn_by_controller(ctx: &Context, controller_key: u32) -> Option<&Entity> {
+    ctx.entities().iter().find(|e| {
+        matches!(e.class().name(), "C_CSPlayerPawn" | "CCSPlayerPawn")
+            && controller_handle_of(e).is_some_and(|h| handle_entity_index(h) == controller_key as usize)
+    })
+}
+
+/// 读 pawn 的 `m_hController`，读不到或字库对不上时返回 None 而不是让解析线程崩掉
+fn controller_handle_of(entity: &Entity) -> Option<u32> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        try_property!(entity, u32, "m_hController")
+    }))
+    .ok()
+    .flatten()
 }
 
 impl Observer for Probe {
@@ -223,8 +272,14 @@ impl Observer for Probe {
         if self.step == 0 {
             self.step = 8;
         }
-        if self.roster.is_empty() && !self.build_roster(ctx) {
-            return Ok(());
+        if self.roster.is_empty() {
+            // 个别 demo 的实体字段与上游库的 schema 不完全一致，读属性会 panic；
+            // 兜一层，崩了就跳过这一 tick，别整份录像都解析不出来
+            let ok = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.build_roster(ctx)))
+                .unwrap_or(false);
+            if !ok {
+                return Ok(());
+            }
         }
         if self.tick_rate <= 0.0 {
             self.tick_rate = 64.0;
@@ -232,14 +287,28 @@ impl Observer for Probe {
         if self.current_round.is_none() || !tick.is_multiple_of(self.step) {
             return Ok(());
         }
-        self.sample(ctx);
+        let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.sample(ctx)));
         Ok(())
     }
 
     fn on_game_event(&mut self, ctx: &Context, ge: &GameEvent) -> ObserverResult {
         let tick = ctx.tick();
+        if std::env::var("TACTICDECK_DEBUG_EVENTS").is_ok() {
+            let name = ge.name().to_string();
+            if !self.seen_events.contains(&name) {
+                eprintln!("事件 {name} @ {tick}");
+                self.seen_events.push(name);
+            }
+        }
         match ge.name() {
-            "round_start" => {
+            // CS2 用 round_prestart / round_officially_ended；CS:GO 老名字一起接住
+            "round_start" | "round_prestart" => {
+                // 上一回合如果没等到结束事件（中途重启、录像截断），就在这里收口
+                if let Some(idx) = self.current_round
+                    && self.rounds[idx].end_tick == 0
+                {
+                    self.rounds[idx].end_tick = tick;
+                }
                 self.rounds.push(RoundAcc {
                     start_tick: tick,
                     end_tick: 0,
@@ -247,7 +316,7 @@ impl Observer for Probe {
                 });
                 self.current_round = Some(self.rounds.len() - 1);
             }
-            "round_end" => {
+            "round_end" | "round_officially_ended" => {
                 let winner = event_u8(ge, "winner")
                     .and_then(Probe::team_name)
                     .map(|w| w.to_string());

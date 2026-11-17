@@ -225,8 +225,8 @@ pub fn encode_png(image: &RgbaImage) -> Result<Vec<u8>> {
     Ok(out)
 }
 
-/// 从本机 CS2 的 VPK 里取出某张地图的雷达图并做成 PNG
-pub fn radar_png(map: &str, cs2_dir: Option<&Path>) -> Result<Vec<u8>> {
+/// 从本机 CS2 的 VPK 里取出某张地图的雷达图（RGBA 像素）
+pub fn radar_rgba(map: &str, cs2_dir: Option<&Path>) -> Result<RgbaImage> {
     let cs2 = discover_cs2(cs2_dir)?;
     let vpk_path = cs2.join("pak01_dir.vpk");
     let vpk = Vpk::open(&vpk_path)?;
@@ -237,8 +237,12 @@ pub fn radar_png(map: &str, cs2_dir: Option<&Path>) -> Result<Vec<u8>> {
         .find(|entry| entry.name.eq_ignore_ascii_case(&name))
         .with_context(|| format!("VPK 里没有 {RADAR_DIR}/{name}.vtex_c"))?;
     let bytes = vpk.read(entry)?;
-    let image = decode_vtex(&bytes)?;
-    encode_png(&image)
+    decode_vtex(&bytes)
+}
+
+/// 从本机 CS2 的 VPK 里取出某张地图的雷达图并做成 PNG
+pub fn radar_png(map: &str, cs2_dir: Option<&Path>) -> Result<Vec<u8>> {
+    encode_png(&radar_rgba(map, cs2_dir)?)
 }
 
 #[cfg(test)]

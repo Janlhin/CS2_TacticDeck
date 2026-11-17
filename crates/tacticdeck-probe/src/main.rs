@@ -19,9 +19,8 @@ fn build_frames(probe: &Probe, profile: Option<&MapProfile>) -> Vec<Frame> {
     probe
         .raw_frames
         .iter()
-        .map(|(tick, rows)| Frame {
-            tick: *tick,
-            players: rows
+        .filter_map(|(tick, rows)| {
+            let players: Vec<PlayerFrame> = rows
                 .iter()
                 .map(|(slot, x, y, yaw, hp, alive)| {
                     let (nx, ny) = match profile {
@@ -38,7 +37,19 @@ fn build_frames(probe: &Probe, profile: Option<&MapProfile>) -> Vec<Frame> {
                         alive: *alive,
                     }
                 })
-                .collect(),
+                .collect();
+            // 只留「十人齐全、坐标都落在 0..1」的帧：热身与掉线帧、个别实体读歪的帧直接丢
+            if players.len() != 10
+                || !players
+                    .iter()
+                    .all(|p| (0.0..=1.0).contains(&p.x) && (0.0..=1.0).contains(&p.y))
+            {
+                return None;
+            }
+            Some(Frame {
+                tick: *tick,
+                players,
+            })
         })
         .collect()
 }
@@ -63,6 +74,7 @@ fn run() -> Result<()> {
     let mut step: u32 = 8;
     let mut extract_maps = false;
     let mut extract_radar: Option<String> = None;
+    let mut check_radar: Option<String> = None;
     let mut cs2_dir: Option<String> = None;
     let mut map_profile_path: Option<String> = None;
 
@@ -92,6 +104,10 @@ fn run() -> Result<()> {
             "--extract-radar" => {
                 i += 1;
                 extract_radar = args.get(i).cloned();
+            }
+            "--check-radar" => {
+                i += 1;
+                check_radar = args.get(i).cloned();
             }
             "--cs2" => {
                 i += 1;
@@ -139,6 +155,11 @@ fn run() -> Result<()> {
         std::fs::write(&out, &png).with_context(|| format!("写 {out} 失败"))?;
         println!("{map} 雷达底图 → {out}（{} 字节）", png.len());
         return Ok(());
+    }
+
+    if let Some(path) = check_radar {
+        let cs2 = cs2_dir.as_deref().map(std::path::Path::new);
+        return check_radar_cover(&path, cs2);
     }
 
     let demo = demo.context("缺少 --demo <file.dem> 或 --extract-maps")?;
@@ -310,6 +331,58 @@ fn validate_replay(path: &str) -> Result<()> {
         replay.frames.len(),
         replay.events.len(),
         replay.players.len()
+    );
+    Ok(())
+}
+
+/// 把回放里每个点位投到雷达图上，算「落在不透明像素上的比例」
+fn check_radar_cover(path: &str, cs2_dir: Option<&std::path::Path>) -> Result<()> {
+    let raw = std::fs::read_to_string(path).with_context(|| format!("读 {path} 失败"))?;
+    let replay: Replay = serde_json::from_str(&raw).context("replay.json 结构不合法")?;
+    let image = tacticdeck_map::radar::radar_rgba(&replay.map, cs2_dir)?;
+    let width = image.width as usize;
+    let height = image.height as usize;
+    let solid = |x: usize, y: usize| image.rgba[(y * width + x) * 4 + 3] > 0;
+
+    let mut inside = 0usize;
+    let mut total = 0usize;
+    let mut outside = Vec::new();
+    for frame in &replay.frames {
+        for player in &frame.players {
+            let px = (player.x * width as f32).round() as isize;
+            let py = ((1.0 - player.y) * height as f32).round() as isize;
+            total += 1;
+            let hit = px >= 0
+                && py >= 0
+                && (px as usize) < width
+                && (py as usize) < height
+                && solid(px as usize, py as usize);
+            if hit {
+                inside += 1;
+            } else if outside.len() < 5 {
+                outside.push((frame.tick, player.slot, player.x, player.y));
+            }
+        }
+    }
+    let rate = if total == 0 {
+        0.0
+    } else {
+        inside as f32 / total as f32 * 100.0
+    };
+    println!(
+        "{}：{} 帧、{} 个点位，落在雷达可走区 {} 个（{:.1}%）",
+        replay.map,
+        replay.frames.len(),
+        total,
+        inside,
+        rate
+    );
+    if !outside.is_empty() {
+        println!("抽样越界：{outside:?}");
+    }
+    anyhow::ensure!(
+        rate >= 98.0,
+        "命中率 {rate:.1}% 低于门槛 98%，坐标口径可能不对"
     );
     Ok(())
 }
