@@ -33,6 +33,7 @@
 | `huaxiangqiming/CSdemowatch` | **未声明许可证**（README 明示） | Replay V2 二进制缓存、高度剖切、从本机提取地图的做法 | 只读；如需复用先取得作者授权 |
 | `Rovniy/cs2-highlights-maker` | 待核 | HLAE + shim 的录制编排时序 | 许可核实后再决定是否引用其代码 |
 | `cs2.cam` | 闭源商业 | 产品形态与功能分级 | **未逆向、未抓取、未复制** |
+| `MikaW21/LiteReplay` | MIT（上游仓库公开，对账提交 `fc23672`） | 抓屏（DXGI）、NVENC/AMF 编码参数、WASAPI 环回、时间戳对齐、`.partial` 原子提交、时间线剪辑 | 可复用代码，但须保留版权与许可声明并在此登记；其自带 FFmpeg DLL **不随本项目分发**（本项目 FFmpeg 只作独立进程调用） |
 
 ## 3. 资产与内容
 

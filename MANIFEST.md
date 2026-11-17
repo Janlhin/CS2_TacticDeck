@@ -8,9 +8,9 @@
 
 | 名称 | 来源 URL | 版本 | SHA256 | 用途 | 许可结论 |
 |---|---|---|---|---|---|
-| `LiteReplay-2.0-Editor4.zip`（源码发布包） | 作者私有分发；公开仓库尚未建立。发布公告：<https://www.xiaoheihe.cn/app/bbs/link/196995653> | 2.0 Editor Preview 4 | `74C747962F74FB81E586A192663E8685A4BF81E58B12FA47A0CF8603079C9400` | 抓屏与编码层的源码参考；同源核对 | MIT（可改、可分发，保留版权与许可声明） |
+| `LiteReplay-2.0-Editor4.zip`（源码发布包） | 官方源码仓库已公开：<https://github.com/MikaW21/LiteReplay>（MIT）。同源核对提交 `fc23672`（Release LiteReplay 2.0 Editor Preview 4） | 2.0 Editor Preview 4 | `74C747962F74FB81E586A192663E8685A4BF81E58B12FA47A0CF8603079C9400` | 抓屏与编码层的源码参考；同源核对 | MIT（可改、可分发，保留版权与许可声明） |
 | `LiteReplay.exe`（发行包内二进制） | 同上（微信发行包，2026-11-15） | 2.0 Editor Preview 4 | `9592D7CBEAAFA668CA78F617F6DE1E0F964CA841687840321AD005FE41C474E7` | 与源码包做同源校验（哈希一致） | MIT |
-| `LiteReplay_Source`（本地源码快照） | 由上述源码包解压而来，未发布 | 2.0 Editor Preview 4 | 210 文件 / 48314308 B；209/209 与包内 `SHA256SUMS` 一致 | 引擎行为的逐文件取证 | MIT |
+| `LiteReplay_Source`（本地源码快照） | 由上述源码包解压而来；已与上游 `main` 文件树逐项比对，仅差上游后续新增的 6 张 README 截图 | 2.0 Editor Preview 4 | 211 文件 / 48314308 B；`SHA256SUMS` 209 行与上游逐字节一致 | 引擎行为的逐文件取证 | MIT（上游仓库公开后确认） |
 | `source2-demo`（crate） | <https://docs.rs/source2-demo> | 0.5.11 | 未获取（由 `Cargo.lock` 锁定版本，未做本地哈希） | CS2 demo 解析（S0 主路径） | MIT OR Apache-2.0（二者择一） |
 
 ## 计划引入（尚未获取）
