@@ -66,7 +66,7 @@ fn main() -> Result<()> {
 }
 
 // 解析上下文含 8192 个实体槽，debug 下帧本身就有几百 KB，必须在 64 MiB 栈线程里跑
-#[allow(clippy::large_unopt_stack_frames)]
+#[allow(unknown_lints, clippy::large_unopt_stack_frames)]
 fn run() -> Result<()> {
     let mut demo: Option<String> = None;
     let mut out: Option<String> = None;
