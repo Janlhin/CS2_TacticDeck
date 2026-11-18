@@ -349,7 +349,7 @@ export default function App() {
             : '未载入回放'}
         </span>
         <span className="sep">|</span>
-        <span>验收口径 deno task verify</span>
+        <span>验收口径 bun run verify</span>
         <span className="sep">|</span>
         <span className="license">AGPL-3.0-or-later · 源码 github.com/Janlhin/CS2_TacticDeck</span>
       </footer>

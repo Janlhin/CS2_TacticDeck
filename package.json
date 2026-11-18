@@ -5,6 +5,22 @@
   "license": "AGPL-3.0-or-later",
   "description": "本地优先的 CS2 多 POV 战术复盘工作台",
   "type": "module",
+  "packageManager": "bun@1.4.4",
+  "scripts": {
+    "verify": "pwsh -NoLogo -NoProfile -File scripts/verify.ps1",
+    "verify:fast": "pwsh -NoLogo -NoProfile -File scripts/verify.ps1 -NoExternal",
+    "docs:check": "pwsh -NoLogo -NoProfile -File scripts/verify.ps1 -NoCargo",
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "build:web": "tsc --noEmit && vite build",
+    "tauri": "tauri",
+    "app:dev": "tauri dev",
+    "app:build": "tauri build",
+    "build": "pwsh -NoLogo -NoProfile -File scripts/build.ps1",
+    "test": "pwsh -NoLogo -NoProfile -File scripts/test.ps1",
+    "test:web": "bun test tests",
+    "hooks": "git config core.hooksPath .husky"
+  },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",

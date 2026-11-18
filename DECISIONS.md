@@ -183,3 +183,13 @@
 - **被否决的替代方案与理由**：① *装回 Node 26.13.0*——环境被别人改一次就复发，且用户明确要求换 Deno；② *用 `deno run npm:<包>` 跑 CLI*——实测 `markdownlint-cli2` 会忽略 `--config`（报 MD013 行长错误），必须直跑本地入口文件才生效；③ *只把 Node 降级到 22*——与"取最新"冲突且收益为零；④ *保留 npm 双轨*——两套锁文件必然漂移。
 - **影响范围**：`deno.json`、`deno.lock`、`.deno-version`、`.npmrc`（仅留 registry）、`package.json`（去 `engines`/`scripts`）、`scripts/verify.ps1`（工具调用与 `toolchain/deno` 步骤）、`scripts/hooks/commit-msg.ps1`、`scripts/build.ps1`、`.github/workflows/verify.yml`、`README.md`、`AGENTS.md`、`docs/engineering-standards.md`、`TASKS.md`。
 - **复审条件**：① Deno 2.9.x 之外的大版本升级需单独提案；② 若任一 npm 工具在 Deno 下出现退出码失真或忽略配置，改回该工具的独立入口脚本并在本条记录；③ 若 Tauri CLI 的打包（`deno task app:build`）在 Deno 下失败，回退为"仅前端用 Deno、打包用独立 Node 便携版"，并重开本节。
+
+## D-016 前端工具链由 Deno 改判到 Bun
+
+- **日期**：2026-11-18
+- **决策**：D-015 的 Deno 方案**改判**为 **Bun 1.4.4**：依赖安装、脚本入口与全部 npm 工具改由 Bun 驱动；删除 `deno.json` / `deno.lock` / `.deno-version`，锁文件换 `bun.lock`，脚本回到 `package.json` 的 `scripts`，版本门禁换 `.bun-version` + `verify` 的 `toolchain/bun` 步骤，测试从 `deno test` 换 `bun test`，CI 换 `oven-sh/setup-bun@v2`。
+- **背景**：2026-10-09 Deno 官方宣布整个团队加入 Cloudflare：运行时只再提供一年月度 bug/安全修复（约到 2027-10），之后停止开发；Deno Deploy 六个月后关停；LTS 2.9 维护到 2027-01-31，代码保持开源。对一个要长期维护的桌面应用，把门禁押在一个有明确 EOL 的运行时不合理，需要趁代码量还小换掉。
+- **被采纳方案**：Bun 1.4.4（MIT，2025-12 由 Anthropic 收购后继续开源迭代；自带 install / test / run / bundler，一套工具替代 Deno 多命令，且兼容 npm 生态与 Tauri CLI）。实测：`bun install` 408 包 12 s 产出 `bun.lock`（147 KB）；`bun test tests` 27 用例 25 过 2 跳过（`replay.json` 未导出时按设计跳过）；`bun run typecheck`、`bun run build:web` 均退出 0。
+- **被否决的替代方案与理由**：① *回到 Node 26 + pnpm*——最"无主"、EOL 风险最低，但需另装 vitest / prettier / eslint 三套件，工具面积比 Bun 大；② *继续用 Deno 到 2027-10*——短期最省事，但届时代码量更大、迁移成本更高，且 LTS 只到 2027-01；③ *Nix / 独立便携运行时*——对 Windows 本地开发与 CI 都增加一层不必要的引导。
+- **影响范围**：`package.json`（`scripts` + `packageManager`）、`bun.lock`、`.bun-version`、删除 `deno.json` / `deno.lock` / `.deno-version`、`tests/*.test.ts`（`Deno.test` → `bun:test`，对象式用例改函数式）、`scripts/verify.ps1`（工具调用与 `toolchain/bun` 步骤）、`scripts/build.ps1`、`scripts/hooks/commit-msg.ps1`、`src-tauri/tauri.conf.json`（`beforeDevCommand` / `beforeBuildCommand`）、`src/App.tsx` 底栏文案、`.github/workflows/verify.yml`、`README.md`、`AGENTS.md`、`docs/engineering-standards.md`、`TASKS.md`（W-08）。
+- **复审条件**：① Bun 1.4.x 之外的大版本升级需单独提案；② 若 Bun 在 Windows 上出现 Tauri 打包失败或测试退出码失真，回退为"Node + pnpm 跑测试/构建、Bun 仅作可选加速"，并重开本节；③ 若 Anthropic 改变 Bun 的开源策略或出现停止维护迹象，按同一标准重新评估（Node 作为兜底）。

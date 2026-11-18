@@ -3,7 +3,7 @@
 **本地优先的 CS2 多 POV 战术复盘工作台。**
 左侧 N 路 POV 视频、中间 2D 战术画布（轨迹 · 道具 · 手绘标注）、底部回合与 tick 双时间轴——三者由同一个 tick 时钟焊在一起，点谁看谁。素材不出本机，断网可用。
 
-当前版本 `0.1.0`（初始开发阶段，公共 API 不稳定）。**已落地可运行骨架 + demo 解析链路**：React 19 + PixiJS 8 的前端、Tauri 2 + Rust 的后端壳，`deno task app:dev` 可起窗口；`crates/tacticdeck-probe` 已能把真实 `.dem` 导成 `replay.json`（S0 / T-01），窗口启动时会从本机 demo 库自动吃这份真实数据（T-13）。
+当前版本 `0.1.0`（初始开发阶段，公共 API 不稳定）。**已落地可运行骨架 + demo 解析链路**：React 19 + PixiJS 8 的前端、Tauri 2 + Rust 的后端壳，`bun run app:dev` 可起窗口；`crates/tacticdeck-probe` 已能把真实 `.dem` 导成 `replay.json`（S0 / T-01），窗口启动时会从本机 demo 库自动吃这份真实数据（T-13）。
 
 ## 它解决什么
 
@@ -18,7 +18,7 @@
 
 | 目标 | 判据 | 命令 | 期望退出码 |
 |---|---|---|---|
-| 仓库门禁 | 文档结构、字段、链接、根目录白名单、脚本基线全部通过 | `deno task verify` | 0 |
+| 仓库门禁 | 文档结构、字段、链接、根目录白名单、脚本基线全部通过 | `bun run verify` | 0 |
 | G1 2D 回放 | 任意 `de_*` demo 能导成 `replay.json` 并通过结构校验；地图校准后点位与游戏内一致 | `cargo run -p tacticdeck-probe -- --demo <file> --out replay.json` → 0，随后 `cargo run -p tacticdeck-probe -- --validate replay.json` → 0 | 0 |
 | G2 多 POV 同步 | 拖时间轴时 N 路视频与 2D 偏差 < 100 ms；连续 3 分钟漂移 < 300 ms | `cargo run -p tacticdeck-probe -- --sync-test <session>` | 0 |
 | G3 批量录制 | 一个回合 → N 路对齐视频；每路首帧同 tick（±2）；耗时 ≤ 6× 回合时长 | `cargo run -p tacticdeck-record -- --round <n>` | 0 |
@@ -42,7 +42,7 @@ G1–G4 的命令属于规划中的二进制，当前尚未存在（见「已知
 | 样式 | Sass（SCSS） | 1.108.2 | `package.json` |
 | 3D 渲染（M2） | Three.js | 未引入（M2 接入） | 计划 |
 | 标注层（S3） | Konva | 未引入（S3 接入） | 计划 |
-| 包管理与工具链 | Deno | 2.9.8 | `deno.json` + `deno.lock` + `.deno-version`（`verify` 的 `toolchain/deno` 步骤比对） |
+| 包管理与工具链 | Bun | 1.4.4 | `package.json` 的 `scripts` + `bun.lock` + `.bun-version`（`verify` 的 `toolchain/bun` 步骤比对） |
 | 脚本运行时 | PowerShell | 7.6.4（要求 ≥ 7.4） | `scripts/*.ps1` 的 `#requires` |
 | demo 解析（主） | `source2-demo` crate | 0.5.11（已接入，T-01） | `crates/tacticdeck-probe/Cargo.toml` |
 | 地图标定（雷达） | 本机 CS2 `pak01_dir.vpk` 内 `resource/overviews/*.txt` | 运行时提取（T-02） | `crates/tacticdeck-map/src/map_profile.rs` |
@@ -77,30 +77,30 @@ G1–G4 的命令属于规划中的二进制，当前尚未存在（见「已知
 
 ## 安装与运行
 
-前置：PowerShell 7.4+、Deno 2.9.8（版本见 `.deno-version`）、Rust 1.99（后续构建阶段才需要）。先克隆 `https://github.com/Janlhin/CS2_TacticDeck.git` 并进入目录。
+前置：PowerShell 7.4+、Bun 1.4.4（版本见 `.bun-version`）、Rust 1.99（后续构建阶段才需要）。先克隆 `https://github.com/Janlhin/CS2_TacticDeck.git` 并进入目录。
 
-前端依赖由 Deno 安装与运行，**不需要 Node.js**：`deno install` 读取 `package.json` 生成 `deno.lock` 与 `node_modules`，所有 npm 工具（Vite / TypeScript / Tauri CLI / commitlint / 文档检查）都由 `deno run -A` 驱动对应入口文件。若机器上 `deno` 版本与 `.deno-version` 不符，`verify` 的 `toolchain/deno` 步骤会直接失败并打印实际解析到的路径。
+前端依赖由 Bun 安装与运行：`bun install` 读取 `package.json` 生成 `bun.lock` 与 `node_modules`，所有 npm 工具（Vite / TypeScript / Tauri CLI / commitlint / 文档检查）都由 `bun run <script>` 或 `bun node_modules/<包入口>` 驱动。若机器上 `bun --version` 与 `.bun-version` 不符，`verify` 的 `toolchain/bun` 步骤会直接失败并打印实际解析到的路径。
 
 安装依赖（一次性，同时装提交钩子）：
 
 ```powershell
-deno install --frozen
-deno task hooks
+bun install --frozen-lockfile
+bun run hooks
 ```
 
 验收：
 
 ```powershell
-deno task verify
+bun run verify
 ```
 
 前端逻辑测试（回放选择器、槽位轮换、十人点位断言）单独跑：
 
 ```powershell
-deno task test:web
+bun run test:web
 ```
 
-`deno task verify` 是**唯一验收入口**：它串起文档结构、字段、链接、根目录白名单、脚本基线，以及根 `Cargo.toml` 存在时的 `cargo fmt` / `clippy` / `test`（按 `--workspace` 跑全部 crate）。它失败就不得提交，禁止绕过。
+`bun run verify` 是**唯一验收入口**：它串起文档结构、字段、链接、根目录白名单、脚本基线，以及根 `Cargo.toml` 存在时的 `cargo fmt` / `clippy` / `test`（按 `--workspace` 跑全部 crate）。它失败就不得提交，禁止绕过。
 
 ### demo 导出（S0 / T-01）
 
@@ -125,7 +125,7 @@ deno task test:web
 
 本机雷达底图实测（`--extract-radar de_mirage`）：VTEX 1024×1024、format 28（RGBA8888，4 字节/像素）、单 mip、LZ4 压缩，解出 4,194,304 字节像素，写成 271,686 字节 PNG；盘面与十人点位在窗口内对齐。
 
-起窗口：`deno task app:dev`（需要 WebView2 运行时，Win10/11 默认自带）；只调前端样式可先跑 `deno task dev` 在浏览器里看。打包：`deno task app:build`（当前 `bundle.active` 为 `false`，只产出可执行文件，不做安装包）。
+起窗口：`bun run app:dev`（需要 WebView2 运行时，Win10/11 默认自带）；只调前端样式可先跑 `bun run dev` 在浏览器里看。打包：`bun run app:build`（当前 `bundle.active` 为 `false`，只产出可执行文件，不做安装包）。
 
 demo 库目录（按优先级）：环境变量 `TACTICDECK_DEMO_DIR` → `文档/CS2_TacticDeck/demos` → 仓库根目录。前两处放 `replay.json` 即被扫描到；`.dem` 会列出来但标记「待导出」，先用 probe 导出成 `replay.json` 再点载入。窗口启动时自动载入库里第一条可用的回放，没有才退回内置合成样本。
 

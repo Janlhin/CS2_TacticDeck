@@ -1,4 +1,5 @@
-/// <reference lib="deno.ns" />
+import { test } from 'bun:test';
+
 import { buildPartialReplay, buildSampleReplay } from '../src/replay/fixture.ts';
 import { TEAM_COLOR } from '../src/replay/geometry.ts';
 import {
@@ -16,7 +17,7 @@ import { buildViews, loadedCount, rotateView, SLOT_COUNT } from '../src/store/ra
 
 const replay = buildSampleReplay();
 
-Deno.test('2d：板面坐标与朝向可用', () => {
+test('2d：板面坐标与朝向可用', () => {
   const frame = frameAt(replay, 320);
   if (!frame) throw new Error('tick 320 应取到帧');
   if (frame.players.length !== 10) throw new Error('每帧应有 10 名选手');
@@ -28,7 +29,7 @@ Deno.test('2d：板面坐标与朝向可用', () => {
   if (TEAM_COLOR.t === TEAM_COLOR.ct) throw new Error('两队配色不能相同');
 });
 
-Deno.test('2d：轨迹采样连续（相邻帧位移有限）', () => {
+test('2d：轨迹采样连续（相邻帧位移有限）', () => {
   const a = frameAt(replay, 100);
   const b = frameAt(replay, 102);
   if (!a || !b) throw new Error('相邻帧必须都存在');
@@ -40,7 +41,7 @@ Deno.test('2d：轨迹采样连续（相邻帧位移有限）', () => {
   }
 });
 
-Deno.test('ten-player：任意 tick 都能取到 10 个点位', () => {
+test('ten-player：任意 tick 都能取到 10 个点位', () => {
   const end = totalTicks(replay);
   for (let tick = 0; tick <= end; tick += 37) {
     const result = validateTenPlayers(replay, tick);
@@ -48,7 +49,7 @@ Deno.test('ten-player：任意 tick 都能取到 10 个点位', () => {
   }
 });
 
-Deno.test('ten-player：缺 1 人即失败', () => {
+test('ten-player：缺 1 人即失败', () => {
   const partial = buildPartialReplay();
   const result = validateTenPlayers(partial, 200);
   if (result.ok) throw new Error('缺 P10 时不应判定通过');
@@ -57,7 +58,7 @@ Deno.test('ten-player：缺 1 人即失败', () => {
   }
 });
 
-Deno.test('rail：11 个槽位与轮换、绑定计数', () => {
+test('rail：11 个槽位与轮换、绑定计数', () => {
   const views = buildViews();
   const first = views[0];
   if (views.length !== SLOT_COUNT || SLOT_COUNT !== 11) throw new Error('应为 11 个槽位');
@@ -75,7 +76,7 @@ Deno.test('rail：11 个槽位与轮换、绑定计数', () => {
   if (start === undefined || rotateView(views, active, 1) !== start) throw new Error('轮换应回到起点');
 });
 
-Deno.test('panels：播放头前进后右栏数据同步', () => {
+test('panels：播放头前进后右栏数据同步', () => {
   const before = rosterAt(replay, 300);
   const after = rosterAt(replay, 520);
 
@@ -104,7 +105,7 @@ Deno.test('panels：播放头前进后右栏数据同步', () => {
   }
 });
 
-Deno.test('timeline：跳转耗时 < 200 ms', () => {
+test('timeline：跳转耗时 < 200 ms', () => {
   const end = totalTicks(replay);
   let worst = 0;
   for (let i = 0; i < 50; i += 1) {
