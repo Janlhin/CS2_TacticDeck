@@ -1,11 +1,12 @@
-/// <reference lib="deno.ns" />
+import { test } from 'bun:test';
+
 
 import { useAppStore } from '../src/store/appStore.ts';
 import { loadedCount } from '../src/store/rail.ts';
 import { buildSampleReplay } from '../src/replay/fixture.ts';
 import { totalTicks } from '../src/replay/selectors.ts';
 
-Deno.test('store：装载回放后十槽全部绑定，播放头落在首回合起点', () => {
+test('store：装载回放后十槽全部绑定，播放头落在首回合起点', () => {
   const replay = buildSampleReplay();
   useAppStore.getState().loadReplay(replay, 'sample');
 
@@ -18,7 +19,7 @@ Deno.test('store：装载回放后十槽全部绑定，播放头落在首回合�
   if (state.playing) throw new Error('装载后不应自动播放');
 });
 
-Deno.test('store：暂停态下 advance 不推进播放头', () => {
+test('store：暂停态下 advance 不推进播放头', () => {
   const replay = buildSampleReplay();
   useAppStore.getState().loadReplay(replay, 'sample');
   const before = useAppStore.getState().tick;
@@ -27,7 +28,7 @@ Deno.test('store：暂停态下 advance 不推进播放头', () => {
   if (useAppStore.getState().tick !== before) throw new Error('暂停时不应推进');
 });
 
-Deno.test('store：播放态下 advance 按 tickRate×倍速推进，到尾自动停', () => {
+test('store：播放态下 advance 按 tickRate×倍速推进，到尾自动停', () => {
   const replay = buildSampleReplay();
   useAppStore.getState().loadReplay(replay, 'sample');
   useAppStore.getState().togglePlay();
@@ -53,7 +54,7 @@ Deno.test('store：播放态下 advance 按 tickRate×倍速推进，到尾自�
   if (useAppStore.getState().playing) throw new Error('到尾应自动暂停');
 });
 
-Deno.test('store：seekTick 夹在合法区间', () => {
+test('store：seekTick 夹在合法区间', () => {
   const replay = buildSampleReplay();
   useAppStore.getState().loadReplay(replay, 'sample');
 

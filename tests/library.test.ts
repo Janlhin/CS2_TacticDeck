@@ -1,4 +1,5 @@
-/// <reference lib="deno.ns" />
+import { test } from 'bun:test';
+
 
 import { useAppStore } from '../src/store/appStore.ts';
 import { buildViews, loadedCount, PLAYER_COUNT, rotateView, SLOT_COUNT } from '../src/store/rail.ts';
@@ -25,7 +26,7 @@ function entry(overrides: Partial<LibraryEntry> = {}): LibraryEntry {
   };
 }
 
-Deno.test('rail：左栏是 1 个固定 2D 总览 + 10 人，共 11 槽', () => {
+test('rail：左栏是 1 个固定 2D 总览 + 10 人，共 11 槽', () => {
   const views = buildViews();
   if (views.length !== SLOT_COUNT) throw new Error(`槽位总数应为 ${SLOT_COUNT}`);
   if (views.filter((view) => view.kind === 'overview').length !== 1) throw new Error('只应有一个总览槽');
@@ -35,7 +36,7 @@ Deno.test('rail：左栏是 1 个固定 2D 总览 + 10 人，共 11 槽', () => 
   if (teams.filter((team) => team === 'ct').length !== 5) throw new Error('CT 侧应 5 人');
 });
 
-Deno.test('rail：轮换只走十个人槽并绕回，不动总览', () => {
+test('rail：轮换只走十个人槽并绕回，不动总览', () => {
   const views = buildViews();
   const firstPlayer = 1;
   let active = firstPlayer;
@@ -48,7 +49,7 @@ Deno.test('rail：轮换只走十个人槽并绕回，不动总览', () => {
   if (back !== PLAYER_COUNT) throw new Error(`反向应绕到 P${PLAYER_COUNT}，实际 ${back}`);
 });
 
-Deno.test('library：只把「能直接载入的回放」算作可用条目', () => {
+test('library：只把「能直接载入的回放」算作可用条目', () => {
   const replay = entry();
   const demo = entry({ name: 'test_demo.dem', kind: 'demo', map: null, rounds: null, ticks: null });
   if (!isUsableEntry(replay)) throw new Error('replay 条目应可用');
@@ -59,7 +60,7 @@ Deno.test('library：只把「能直接载入的回放」算作可用条目', ()
   if (firstReplay([demo]) !== null) throw new Error('没有可用回放时应返回 null');
 });
 
-Deno.test('library：条目展示拼地图 / 回合数 / 体积', () => {
+test('library：条目展示拼地图 / 回合数 / 体积', () => {
   if (entryLabel(entry()) !== 'replay.json · de_mirage · R10 · 5.0 MB') {
     throw new Error(`展示文案不对：${entryLabel(entry())}`);
   }
@@ -67,7 +68,7 @@ Deno.test('library：条目展示拼地图 / 回合数 / 体积', () => {
   if (formatBytes(2048) !== '2 KB') throw new Error('KB 段应按整数显示');
 });
 
-Deno.test('library：真实 replay.json 字段能通过校验', () => {
+test('library：真实 replay.json 字段能通过校验', () => {
   const payload = JSON.parse(JSON.stringify(buildSampleReplay())) as Record<string, unknown>;
   payload.map = 'de_mirage';
   payload.tickRate = 64;
@@ -104,7 +105,7 @@ Deno.test('library：真实 replay.json 字段能通过校验', () => {
   }
 });
 
-Deno.test('library：载入真实来源后十槽绑定到该路径', () => {
+test('library：载入真实来源后十槽绑定到该路径', () => {
   const replay = buildSampleReplay();
   const source = 'D:/demos/de_mirage.json';
   useAppStore.getState().loadReplay(replay, source);

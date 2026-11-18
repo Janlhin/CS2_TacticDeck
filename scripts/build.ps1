@@ -15,5 +15,5 @@ if (-not (Test-Path -LiteralPath $manifest)) {
 & cargo build --manifest-path $manifest --all
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-& deno task build:web
+& bun run build:web
 exit $LASTEXITCODE

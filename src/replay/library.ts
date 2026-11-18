@@ -1,6 +1,6 @@
 /**
  * 本机 demo 库：从 Rust 侧取候选列表、读回放，并在浏览器预览时优雅降级。
- * 校验逻辑保持纯函数，方便 `deno task test:web` 直接测。
+ * 校验逻辑保持纯函数，方便 `bun run test:web` 直接测。
  */
 
 import type { Replay } from './types.ts';
