@@ -16,9 +16,9 @@ $bin = Join-Path $repo 'node_modules/@commitlint/cli/cli.js'
 $cfg = Join-Path $repo 'config/commitlint.config.mjs'
 
 if (-not (Test-Path -LiteralPath $bin)) {
-    Write-Host '[FAIL]   未安装 commitlint（先运行 deno install）'
+    Write-Host '[FAIL]   未安装 commitlint（先运行 bun install）'
     exit 1
 }
 
-& deno run -A $bin --config $cfg --edit $MsgFile
+& bun $bin --config $cfg --edit $MsgFile
 exit $LASTEXITCODE

@@ -1,4 +1,5 @@
-/// <reference lib="deno.ns" />
+import { test } from 'bun:test';
+
 
 import type { Replay } from '../src/replay/types.ts';
 import {
@@ -32,10 +33,7 @@ const replay = await loadReplay();
  * 真实 demo 导出的 replay.json 契约回归。
  * 本地跑过 probe 导出后才生效；没导出时跳过，避免 CI 依赖私有大文件。
  */
-Deno.test({
-  name: 'replay 契约：probe 导出的 replay.json 满足前端结构',
-  ignore: replay === null,
-  fn() {
+(replay === null ? test.skip : test)('replay 契约：probe 导出的 replay.json 满足前端结构', () => {
     if (!replay) throw new Error('未生成 replay.json');
     if (!replay.map) throw new Error('map 为空');
     if (replay.tickRate <= 0) throw new Error('tickRate 非法');
@@ -68,13 +66,9 @@ Deno.test({
         throw new Error('击杀事件槽位越界');
       }
     }
-  },
 });
 
-Deno.test({
-  name: 'replay 契约：选择器能吃下真实 demo 数据',
-  ignore: replay === null,
-  fn() {
+(replay === null ? test.skip : test)('replay 契约：选择器能吃下真实 demo 数据', () => {
     if (!replay) throw new Error('未生成 replay.json');
     const total = totalTicks(replay);
     const middle = Math.floor(total / 2);
@@ -110,5 +104,4 @@ Deno.test({
 
     const alive = aliveCount(replay, middle, 't') + aliveCount(replay, middle, 'ct');
     if (alive > 10) throw new Error('存活人数超过 10');
-  },
 });

@@ -1,9 +1,10 @@
-/// <reference lib="deno.ns" />
+import { test } from 'bun:test';
+
 
 import { buildSampleReplay } from '../src/replay/fixture.ts';
 import { heatGrid, killSpots, roundEvents } from '../src/replay/selectors.ts';
 
-Deno.test('panels：本回合事件按时间正序，未到的置灰', () => {
+test('panels：本回合事件按时间正序，未到的置灰', () => {
   const replay = buildSampleReplay();
 
   const early = roundEvents(replay, 100);
@@ -21,14 +22,14 @@ Deno.test('panels：本回合事件按时间正序，未到的置灰', () => {
   }
 });
 
-Deno.test('panels：回合切换后事件列表随之切换', () => {
+test('panels：回合切换后事件列表随之切换', () => {
   const replay = buildSampleReplay();
   const rows = roundEvents(replay, 700);
   if (rows.length !== 3) throw new Error('第 2 回合应有 3 条事件');
   if (rows[0]?.event.tick !== 840) throw new Error('第 2 回合首条事件应在 840 tick');
 });
 
-Deno.test('panels：击杀落点取自死亡瞬间坐标且限定回合', () => {
+test('panels：击杀落点取自死亡瞬间坐标且限定回合', () => {
   const replay = buildSampleReplay();
   const spots = killSpots(replay, 620, 'round');
   if (spots.length !== 3) throw new Error(`第 1 回合应有 3 个落点，实际 ${spots.length}`);
@@ -39,7 +40,7 @@ Deno.test('panels：击杀落点取自死亡瞬间坐标且限定回合', () => 
   if (killSpots(replay, 1300, 'all').length !== 6) throw new Error('tick 1300 时全场累计应有 6 个落点');
 });
 
-Deno.test('panels：热图网格数量与热度归一化', () => {
+test('panels：热图网格数量与热度归一化', () => {
   const replay = buildSampleReplay();
   const spots = killSpots(replay, 620, 'round');
   const cols = 20;
@@ -56,7 +57,7 @@ Deno.test('panels：热图网格数量与热度归一化', () => {
   }
 });
 
-Deno.test('panels：热图把坐标贴到正确格子（含边界裁剪）', () => {
+test('panels：热图把坐标贴到正确格子（含边界裁剪）', () => {
   const cells = heatGrid(
     [
       { tick: 1, victim: 1, x: 0, y: 0 },
