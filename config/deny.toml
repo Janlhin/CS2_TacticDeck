@@ -1,0 +1,41 @@
+# cargo-deny 配置（W-06 依赖许可扫描）
+#
+# 判定口径：
+# - allow 只收录依赖图中实际出现的宽松许可；列入却未被任何 crate 使用的
+#   许可由 unused-allowed-license = "deny" 直接判失败，不许为过检预留宽放。
+# - copyleft（AGPL）不进全局 allow，仅经 exceptions 按包名对本仓库自有 crate
+#   开放；第三方依赖出现 AGPL/GPL 系列一律默认拒绝。
+# - 扫描命令见 scripts/verify.ps1 与 .github/workflows/verify.yml。
+
+[licenses]
+unused-allowed-license = "deny"
+unused-license-exception = "deny"
+confidence-threshold = 0.8
+
+# 依赖图中实际出现、可并入 AGPL 作品的宽松许可（MIT / ISC / BSD / Apache-2.0 /
+# MPL-2.0 等）。逐项对应真实第三方 crate，不留通配。
+allow = [
+    "0BSD",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-3-Clause",
+    "CC0-1.0",
+    "CDLA-Permissive-2.0",
+    "ISC",
+    "MIT",
+    "MIT-0",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+
+# 本仓库自有 crate：整体按 AGPL-3.0-or-later 分发（见 LICENSE / NOTICE），
+# 其 copyleft 声明只在此处按包名授权，不放宽到全局 allow。
+exceptions = [
+    { crate = "cs2-tacticdeck", allow = ["AGPL-3.0-or-later"] },
+    { crate = "tacticdeck-annotate", allow = ["AGPL-3.0-or-later"] },
+    { crate = "tacticdeck-map", allow = ["AGPL-3.0-or-later"] },
+    { crate = "tacticdeck-probe", allow = ["AGPL-3.0-or-later"] },
+    { crate = "tacticdeck-sync", allow = ["AGPL-3.0-or-later"] },
+]

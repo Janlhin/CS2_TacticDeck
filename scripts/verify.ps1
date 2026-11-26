@@ -260,11 +260,17 @@ if ($hasCargo -and -not $NoCargo) {
         if ($LASTEXITCODE -ne 0) { Fail "cargo test 退出码 $LASTEXITCODE" }
         '全部通过'
     }
+    Invoke-Step 'rust/deny-licenses' {
+        & cargo deny --config (Join-Path $repo 'config/deny.toml') check licenses
+        if ($LASTEXITCODE -ne 0) { Fail "cargo deny 退出码 $LASTEXITCODE" }
+        '许可扫描通过：allow 仅含实际出现的宽松许可，copyleft 仅自有包 exceptions'
+    }
 }
 else {
     Write-Step 'rust/fmt' 'SKIP' '无 src-tauri/Cargo.toml 或按参数跳过'
     Write-Step 'rust/clippy' 'SKIP' '同上'
     Write-Step 'rust/test' 'SKIP' '同上'
+    Write-Step 'rust/deny-licenses' 'SKIP' '同上'
 }
 
 # ---------------------------------------------------------------- 汇总

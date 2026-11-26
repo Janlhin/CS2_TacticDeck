@@ -39,6 +39,7 @@
 | `markdownlint-cli2` / `markdown-link-check` | 0.24.1 / 3.15.0 | 文档校验 | MIT / ISC |
 | `remark-cli` / `remark-validate-links` | 12.0.1 / 13.1.0 | 锚点与相对链接校验 | MIT |
 | `@commitlint/*` / `husky` / `lint-staged` | 21.x / 9.1.7 / 17.6.1 | 提交门禁 | MIT |
+| `cargo-deny`（crate，CI 工具） | 0.22.1 | Rust 依赖许可扫描（不进入运行时） | MIT OR Apache-2.0 |
 
 ## 本地参考源码（浅克隆，位于仓库外 `D:\Projects\_refs`，不入库）
 

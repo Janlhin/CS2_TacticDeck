@@ -24,6 +24,7 @@
 | `TypeScript` | github.com/microsoft/TypeScript | Apache-2.0 | 语言 | — |
 | `Zustand` | github.com/pmndrs/zustand | MIT | 状态管理 | — |
 | `FFmpeg` | ffmpeg.org | LGPL 2.1+（默认构建） | 编码 / 封装 | **仅启用 nvenc / amf / mf + aac**；启用 GPL 组件会使整个产品转为 GPL，禁止 |
+| `cargo-deny` | crates.io（github.com/EmbarkStudios/cargo-deny） | MIT OR Apache-2.0 | 构建 / CI 期 Rust 依赖许可扫描 | 仅工具链，不进入运行时；版本锁定 0.22.1，配置见 `config/deny.toml` |
 
 ## 2. 仅作参考，不复制代码
 
@@ -47,7 +48,7 @@
 ## 4. 风险提示
 
 - **HLAE 与 VAC**：HLAE 官方声明其为"技术意义上的 hack"，加入受 VAC 保护的服务器大概率被封。本项目只在离线 demo 模式调用，并在 UI 中显著提示。
-- **许可证传染**：新增任何依赖前先查许可证；CI 计划引入 `cargo deny` 与 npm 依赖许可检查（见 `TASKS.md` W-06）。
+- **许可证传染**：新增任何依赖前先查许可证。Rust 侧已接入 `cargo deny`（0.22.1，配置 `config/deny.toml`；本地验收与 CI 均执行 `cargo deny --config config/deny.toml check licenses`）。判定口径：allow 列表只收录依赖图中实际出现的宽松许可，列入却未被任何 crate 使用的许可直接判失败；copyleft（AGPL）不进全局 allow，仅按包名对本仓库自有 crate 经 exceptions 授权，第三方依赖出现 AGPL/GPL 系列一律拒绝。npm 依赖许可检查尚未接入，留待后续任务。
 - **更正机制**：若发现本项目使用了某组件却未在此登记，或对许可状态的判断有误，请开 issue，我们会修正并更新本文件。
 
 ## 5. 与本项目 AGPL-3.0-or-later 的兼容性
