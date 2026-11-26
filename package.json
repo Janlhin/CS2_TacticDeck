@@ -16,6 +16,7 @@
     "tauri": "tauri",
     "app:dev": "tauri dev",
     "app:build": "tauri build",
+    "app:cold-start": "pwsh -NoLogo -NoProfile -File scripts/cold-start.ps1",
     "build": "pwsh -NoLogo -NoProfile -File scripts/build.ps1",
     "test": "pwsh -NoLogo -NoProfile -File scripts/test.ps1",
     "test:web": "bun test tests",
