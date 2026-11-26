@@ -54,6 +54,13 @@
 ## 5. 与本项目 AGPL-3.0-or-later 的兼容性
 
 - **宽松许可依赖可并入 AGPL**：MIT / ISC / BSD / Apache-2.0 / MPL-2.0 / BlueOak 等均可作为组件进入 AGPL 作品，只需保留各自的版权与许可声明。已对 511 个已安装依赖做过许可分布核对，无 GPL 系列。
+- **`config/deny.toml` allow 清单逐项口径**：以下 13 个 SPDX 标识均为可并入 AGPL 作品的宽松、公有领域式或文件级弱 copyleft 许可，逐一定性如下：
+  - `MIT` / `ISC` / `BSD-3-Clause`：经典宽松版权许可，保留版权与许可声明即可随组件并入。
+  - `Apache-2.0` / `Apache-2.0 WITH LLVM-exception`：宽松许可并含专利授权；后者是 LLVM 例外变体，放宽了链接场景限制。
+  - `0BSD` / `MIT-0` / `CC0-1.0` / `Unlicense`：公有领域式放弃或近乎无限制——0BSD 无署名要求；MIT-0 不保留署名；CC0-1.0 与 Unlicense 由作者放弃版权。
+  - `Zlib` / `Unicode-3.0`：宽松许可，允许使用、修改与再分发，仅需保留许可声明且不得冒用作者名义。
+  - `MPL-2.0`：文件级弱 copyleft——被修改的 MPL 文件须继续以 MPL 发布，但可与 AGPL 作品组合链接成单一作品。
+  - `CDLA-Permissive-2.0`：宽松数据许可（非代码许可），本项目仅 `webpki-roots` 根证书包使用，允许使用与再分发，无 copyleft 传染。
 - **GPLv3 可组合**：依 AGPL 第 13 条，可与 GPLv3 作品链接成单一作品（组合后整体按 AGPL 分发）；**GPLv2-only 不可**，引入前必须确认是 "or later"。
 - **FFmpeg（LGPL 2.1+）不内嵌**：本项目只把 FFmpeg 作为**独立进程调用**，不链接、不随包分发二进制，因此不构成 LGPL 与 AGPL 的直接组合。若将来改为随包分发 FFmpeg 二进制，必须重新评估（LGPL 2.1 无法一键升级到 AGPL），并记入 `DECISIONS.md`。
 - **不得引入的许可**：GPLv2-only、SSPL、以及任何禁止商用的条款（如 CC-BY-NC），与 AGPL 目标冲突或无法满足。
