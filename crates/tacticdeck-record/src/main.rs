@@ -5,9 +5,10 @@
 
 use std::process::ExitCode;
 use tacticdeck_record::{
-    Collector, CollectorError, PassRequest, RecordMetadata, RecordStep, RecordingInterval,
-    UndecidedCollector, check_first_frame_alignment, metadata_file_name, pass_specs, plan_round,
-    video_file_name,
+    Collector, CollectorError, FakeClock, HANDOFF_BUDGET_MS, HandoffFailure, HandoffMachine,
+    HandoffOutcome, PassRequest, RecordMetadata, RecordStep, RecordingInterval, ReplaySummary,
+    ScriptedParser, TICK_ALIGNMENT_TOLERANCE, UndecidedCollector, check_first_frame_alignment,
+    metadata_file_name, pass_specs, plan_round, video_file_name,
 };
 
 fn main() -> ExitCode {
@@ -228,6 +229,116 @@ fn self_test() -> ExitCode {
         "采集器占位待 Q-01",
         undecided && message.contains("待 Q-01 裁决"),
         &message,
+    ));
+
+    // 7. 交接状态机（T-16）：假清单 + 假解析 + 虚拟时钟，不读墙钟、不碰真实录像
+    let happy = ReplaySummary {
+        first_round_start_tick: metadata.start_tick,
+        player_count: 10,
+        round_count: 1,
+    };
+    let mut machine = HandoffMachine::new(ScriptedParser::returns(happy), FakeClock::default());
+    let outcome = machine.run(&metadata, 12);
+    match outcome {
+        HandoffOutcome::Entered {
+            entry,
+            summary,
+            elapsed_ms,
+        } => {
+            let drift = metadata.start_tick.abs_diff(entry.tick);
+            let ok = elapsed_ms <= HANDOFF_BUDGET_MS
+                && drift <= TICK_ALIGNMENT_TOLERANCE
+                && entry.tick == summary.first_round_start_tick
+                && entry.round_index == 0;
+            mark(check(
+                "交接 — 正常路径",
+                ok,
+                &format!(
+                    "假清单下 {elapsed_ms} ms 进入回放，tick 差 {drift}，停在 tick {}（回合 {}）",
+                    entry.tick, entry.round_index
+                ),
+            ));
+        }
+        HandoffOutcome::Failed { failure, .. } => {
+            mark(check("交接 — 正常路径", false, &failure.to_string()));
+        }
+    }
+
+    // 7a. 解析失败 → Failed，原因原样带入
+    let mut machine = HandoffMachine::new(ScriptedParser::fails("demo 损坏"), FakeClock::default());
+    let outcome = machine.run(&metadata, 5);
+    let parse_failed = matches!(
+        outcome,
+        HandoffOutcome::Failed {
+            failure: HandoffFailure::ParseFailed { .. },
+            ..
+        }
+    );
+    mark(check(
+        "交接 — 解析失败进 Failed",
+        parse_failed,
+        "解析错误原样带入失败原因",
+    ));
+
+    // 7b. tick 漂移 3 / 5 → Failed（±2 含端点之外）
+    for (label, drift) in [("漂移 3", 3u32), ("漂移 5", 5u32)] {
+        let summary = ReplaySummary {
+            first_round_start_tick: metadata.start_tick + drift,
+            player_count: 10,
+            round_count: 1,
+        };
+        let mut machine =
+            HandoffMachine::new(ScriptedParser::returns(summary), FakeClock::default());
+        let outcome = machine.run(&metadata, 5);
+        let bad = matches!(
+            outcome,
+            HandoffOutcome::Failed {
+                failure: HandoffFailure::TickDrift { .. },
+                ..
+            }
+        );
+        mark(check(
+            &format!("交接 — tick {label} 进 Failed"),
+            bad,
+            &format!("摘要 tick = 清单 tick + {drift}"),
+        ));
+    }
+
+    // 7c. 9 人 → Failed（Q-06 未决：单人降级不在本轮范围）
+    let nine = ReplaySummary {
+        first_round_start_tick: metadata.start_tick,
+        player_count: 9,
+        round_count: 1,
+    };
+    let mut machine = HandoffMachine::new(ScriptedParser::returns(nine), FakeClock::default());
+    let outcome = machine.run(&metadata, 5);
+    let bad = matches!(
+        outcome,
+        HandoffOutcome::Failed {
+            failure: HandoffFailure::PlayerCountMismatch { .. },
+            ..
+        }
+    );
+    mark(check(
+        "交接 — 9 人进 Failed",
+        bad,
+        "十人回放前提不满足（Q-06 单人降级未决）",
+    ));
+
+    // 7d. 预算超 3000 ms（假解析耗时 3001）→ Failed
+    let mut machine = HandoffMachine::new(ScriptedParser::returns(happy), FakeClock::default());
+    let outcome = machine.run(&metadata, HANDOFF_BUDGET_MS + 1);
+    let bad = matches!(
+        outcome,
+        HandoffOutcome::Failed {
+            failure: HandoffFailure::BudgetExceeded { .. },
+            ..
+        }
+    );
+    mark(check(
+        "交接 — 预算超 3000 ms 进 Failed",
+        bad,
+        "假解析耗时 3001 ms",
     ));
 
     finish(failures)

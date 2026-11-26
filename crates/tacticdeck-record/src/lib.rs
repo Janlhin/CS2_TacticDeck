@@ -1,4 +1,5 @@
-//! 录制编排骨架：区间切分、多遍任务列表、tick 元数据 schema、输出命名规则与采集器 trait 占位。
+//! 录制编排骨架：区间切分、多遍任务列表、tick 元数据 schema、输出命名规则、采集器 trait 占位
+//! 与录制完成 → 进入回放的交接状态机。
 //!
 //! 本 crate **只做编排与元数据**：把一个回合的 tick 区间拆成 N 遍串行任务、算好输出路径、
 //! 生成可序列化的元数据；**不实现真实采集**。
@@ -12,6 +13,7 @@
 //! 多路不混分辨率。
 
 mod collector;
+mod handoff;
 mod interval;
 mod metadata;
 mod naming;
@@ -19,6 +21,11 @@ mod tasks;
 
 pub use collector::{
     Collector, CollectorCapabilities, CollectorError, PassOutcome, PassRequest, UndecidedCollector,
+};
+pub use handoff::{
+    EXPECTED_PLAYER_COUNT, FakeClock, HANDOFF_BUDGET_MS, HandoffFailure, HandoffMachine,
+    HandoffOutcome, HandoffState, ParseError, PendingParser, ReplayEntry, ReplayParser,
+    ReplaySummary, ScriptedParser, TICK_ALIGNMENT_TOLERANCE, VirtualClock,
 };
 pub use interval::{
     IntervalError, PRE_ROLL_PAUSE_TICKS, PassSpec, PlanIntervalError, RecordStep,
