@@ -125,7 +125,7 @@ bun run test:web
 
 本机雷达底图实测（`--extract-radar de_mirage`）：VTEX 1024×1024、format 28（RGBA8888，4 字节/像素）、单 mip、LZ4 压缩，解出 4,194,304 字节像素，写成 271,686 字节 PNG；盘面与十人点位在窗口内对齐。
 
-起窗口：`bun run app:dev`（需要 WebView2 运行时，Win10/11 默认自带）；只调前端样式可先跑 `bun run dev` 在浏览器里看。打包：`bun run app:build`（当前 `bundle.active` 为 `false`，只产出可执行文件，不做安装包）。
+起窗口：`bun run app:dev`（需要 WebView2 运行时，Win10/11 默认自带）；只调前端样式可先跑 `bun run dev` 在浏览器里看。打包：`bun run app:build` 先构建 release 可执行文件，再用 NSIS 产出 Windows 安装包；安装包落在 `cargo metadata` 推导的 `target_directory` 下的 `release/bundle/nsis/`，文件名形如 `CS2 TacticDeck_<版本>_x64-setup.exe`，具体路径与体积以 `tauri build` 结尾打印为准。
 
 demo 库目录（按优先级）：环境变量 `TACTICDECK_DEMO_DIR` → `文档/CS2_TacticDeck/demos` → 仓库根目录。前两处放 `replay.json` 即被扫描到；`.dem` 会列出来但标记「待导出」，先用 probe 导出成 `replay.json` 再点载入。窗口启动时自动载入库里第一条可用的回放，没有才退回内置合成样本。
 
