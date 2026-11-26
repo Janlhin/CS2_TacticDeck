@@ -54,9 +54,40 @@
 | `.rounds[].index` | `RoundInfo.index: u32` | number | — | 0 起，按数组位置枚举 | `0` | 回合序号 |
 | `.rounds[].startTick` | `start_tick: u32` | number | tick | ≤ `endTick` | `65` | 回合开始事件 tick（`round_start` / `round_prestart`） |
 | `.rounds[].endTick` | `end_tick: u32` | number | tick | ≥ `startTick`；录像截断时回退到最后一条采样帧的 tick | `5735` | 回合结束事件 tick（`round_end` / `round_officially_ended`），含端点 |
-| `.rounds[].winner` | `winner: Option<String>` | string \| null | 阵营枚举 | `"t"` / `"ct"` / `null`；校验器不校验取值 | `null` | 胜方阵营；事件字段取不到合法阵营时为 `null` |
+| `.rounds[].winner` | `winner: Option<String>` | string \| null | 阵营枚举 | `"t"` / `"ct"` / `null`；校验器不校验取值 | `null` | 胜方阵营；事件字段取不到合法阵营时为 `null`（空值成因见下节） |
 
 实测：24 回合 `winner` 全部为 `null`；无 `endTick = 0` 的回合；无起止反序回合；相邻回合首尾相接（第 0 回合 `endTick=5735`，第 1 回合 `startTick=5735`）。
+
+### winner 空值成因（实测）
+
+用事件调试开关重跑同一份录像，确认回合事件流里没有 `round_end`：
+
+```powershell
+$env:TACTICDECK_DEBUG_EVENTS='1'
+cargo run -p tacticdeck-probe -- --demo <file.dem> --out <replay.json> --step 8
+```
+
+探针在 `TACTICDECK_DEBUG_EVENTS` 下只打印每个事件名首次出现的 tick。本份 de_mirage 录像的回合相关事件（首次出现 tick）：
+
+| 事件 | 首次 tick |
+|---|---|
+| `cs_pre_restart` | 46 |
+| `round_prestart` | 65 |
+| `round_poststart` | 65 |
+| `cs_round_start_beep` | 1250 |
+| `cs_round_final_beep` | 1441 |
+| `round_freeze_end` | 1441 |
+| `round_announce_match_start` | 1441 |
+| `round_officially_ended` | 5735 |
+| `round_time_warning` | 36608 |
+| `round_announce_last_round_half` | 71268 |
+| `round_announce_match_point` | 117942 |
+| `round_announce_final` | 131707 |
+| `cs_win_panel_match` | 137816 |
+
+事件清单中**没有 `round_end`**。`winner` 只在 `round_end` / `round_officially_ended` 分支里从事件的 `winner` 字段读取（`event_u8("winner")` → 阵营映射）；本份录像结束回合走 `round_officially_ended`，该事件不带 `winner` 字段，读取结果为 `None`，于是 24/24 回合 `winner` 为 `null`。
+
+定性：这是**事件字段缺失导致的空值**，不是校验器放过——`--validate` 本就不校验 `winner` 取值（见上节校验清单），24/24 `null` 是导出侧的事实状态。影响：当前这类 CS2 GOTV 产物 `winner` 恒为 `null`，未观测到非 null 样本；胜方字段的补齐方向留待后续任务。
 
 ## `frames[]`（Frame）
 
@@ -189,7 +220,7 @@ world = cell * 512 - 16384 + vec
 | # | 位置 | 现状 | 说明 |
 |---|---|---|---|
 | D-1 | `Replay.meta` 可选性 | TS `Replay.meta?: ReplayMeta` 标可选；Rust 导出恒定写入 `meta` | 前端内置合成样本可以不带 `meta`；probe 产物一定带 |
-| D-2 | `winner` 类型收窄 | TS 为 `TeamSide \| null`（`"t"` / `"ct"` / `null`）；Rust 为 `Option<String>` | 本份实测 24/24 为 `null`，未观察到非 null 样本；事件字段解析出合法阵营时才写入 |
+| D-2 | `winner` 类型收窄 | TS 为 `TeamSide \| null`（`"t"` / `"ct"` / `null`）；Rust 为 `Option<String>` | 本份实测 24/24 为 `null`，未观察到非 null 样本；成因是事件流无 `round_end`、`round_officially_ended` 不带 `winner` 字段（见「winner 空值成因（实测）」），属事件字段缺失而非校验器放过；补齐方向留待后续任务 |
 | D-3 | `normalize` 注释滞后 | TS 注释写「目前是 `bbox-uniform`，T-02 换雷达校准」；代码已支持 `"radar"`（带 `--map-profile` 时） | 注释未随 T-02 更新；两种取值以上节「坐标口径」为准 |
 | D-4 | `dir` 旋转方向 | TS 注释写「0 表示朝右、逆时针为正」；`dir` 取自 Source 眼睛偏航角 yaw | 角度单位与 0 朝向东一致；旋转正方向待与游戏内视角复核，暂不改动类型注释 |
 | D-5 | 数值精度 | Rust：`x/y/dir` 为 `f32`、`tickRate` 为 `f64`、`hp` 为 `i32`、槽位/计数为 `u8` / `u32`；TS 一律 `number` | JSON 不携带精度信息，前端按 number 处理 |
