@@ -107,7 +107,7 @@ Invoke-Step 'layout/root-whitelist' {
     $top = $tracked | ForEach-Object { ($_ -split '/')[0] } | Sort-Object -Unique
     $allowed = @(
         'README.md', 'AGENTS.md', 'DECISIONS.md', 'TASKS.md', 'MANIFEST.md',
-        'LICENSE', 'CHANGELOG.md', 'NOTICE',
+        'LICENSE', 'CHANGELOG.md', 'CONTRIBUTING.md', 'SECURITY.md', 'NOTICE',
         'package.json', 'deno.json', 'deno.lock',
         '.gitignore', '.gitattributes', '.editorconfig', '.npmrc', '.deno-version', '.env.example',
         'commitlint.config.mjs', 'tsconfig.json', 'eslint.config.mjs', 'vitest.config.mjs', 'playwright.config.mjs',
