@@ -155,7 +155,7 @@ Invoke-Step 'docs/lint' {
 Invoke-Step 'docs/links-internal' {
     $entry = Join-Path $repo 'node_modules/remark-cli/cli.js'
     if (-not (Test-Path -LiteralPath $entry)) { Fail '未安装 remark-cli（先运行 bun install）' }
-    $targets = @('README.md', 'AGENTS.md', 'DECISIONS.md', 'TASKS.md', 'MANIFEST.md', 'docs/engineering-standards.md', 'docs/third-party-notices.md')
+    $targets = @('README.md', 'AGENTS.md', 'DECISIONS.md', 'TASKS.md', 'MANIFEST.md', 'docs/engineering-standards.md', 'docs/third-party-notices.md', 'docs/replay-json-fields.md')
     $out = & bun $entry --frail --quiet --use remark-validate-links @targets 2>&1
     $text = ($out | Out-String).Trim()
     # remark-cli 在部分环境下即使有 warning 也返回 0，因此以输出内容为准

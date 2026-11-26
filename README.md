@@ -65,7 +65,7 @@ G1–G4 的命令属于规划中的二进制，当前尚未存在（见「已知
 | `DECISIONS.md` | 追加式决策日志：采纳方案、否决方案、理由、复审条件 |
 | `TASKS.md` | 任务队列与待裁决台账，按功能面分组 |
 | `MANIFEST.md` | 第三方二进制、源码与逆向对象的来源登记（URL + SHA256 + 用途 + 许可结论） |
-| `docs/` | 工程规范全文（`engineering-standards.md`）与第三方许可边界（`third-party-notices.md`） |
+| `docs/` | 工程规范全文（`engineering-standards.md`）、第三方许可边界（`third-party-notices.md`）与 `replay.json` 字段对照草案（`replay-json-fields.md`） |
 | `scripts/` | 全部可执行逻辑：`verify.ps1`、`hooks/*.ps1`、后续的 `pre-release.ps1` |
 | `config/` | 工具配置：Markdown 校验、链接检查、提交信息规则 |
 | `.github/` | CI：每次推送与 PR 运行 `verify` |
