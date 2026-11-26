@@ -2,6 +2,15 @@ import { create } from 'zustand';
 import type { Replay } from '../replay/types.ts';
 import { totalTicks } from '../replay/selectors.ts';
 import {
+  buildTrackIndex,
+  parseTrackManifest,
+  selectTrack,
+  type RecordingTrack,
+  type TrackIndex,
+  type TrackManifest,
+  type TrackSource,
+} from '../replay/tracks.ts';
+import {
   OVERVIEW_ID,
   buildViews,
   bindAllSources,
@@ -28,6 +37,18 @@ type AppState = {
   advance: (deltaMs: number) => void;
   togglePlay: () => void;
   setSpeed: (speed: number) => void;
+  /** 当前回合已注入的录像轨清单；未注入为 null */
+  trackManifest: TrackManifest | null;
+  /** slot → 轨 的索引，清单注入时建一次；切主只查表，不重建 */
+  trackIndex: TrackIndex;
+  /** 可注入的清单来源；null 表示尚未接线（本轮测试用静态源喂假清单） */
+  trackSource: TrackSource | null;
+  setTrackSource: (source: TrackSource | null) => void;
+  setTrackManifest: (manifest: TrackManifest) => void;
+  /** 按回合序号从已注入来源拉取清单，校验后落库 */
+  fetchTracks: (roundIndex: number) => Promise<void>;
+  /** 当前主视图对应的录像轨；主槽不在清单里时为 undefined */
+  activeTrack: () => RecordingTrack | undefined;
 };
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -37,6 +58,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   tick: 0,
   playing: false,
   speed: 1,
+  trackManifest: null,
+  trackIndex: new Map(),
+  trackSource: null,
 
   bindSource: (id, source) =>
     set((state) => ({
@@ -78,4 +102,19 @@ export const useAppStore = create<AppState>((set, get) => ({
   togglePlay: () => set((state) => ({ playing: !state.playing })),
 
   setSpeed: (speed) => set({ speed }),
+
+  setTrackSource: (source) => set({ trackSource: source }),
+
+  // 索引在清单注入这一刻构建一次；切主路径只做 Map 查表，不再重解析或重排清单
+  setTrackManifest: (manifest) =>
+    set({ trackManifest: manifest, trackIndex: buildTrackIndex(manifest) }),
+
+  fetchTracks: async (roundIndex) => {
+    const source = get().trackSource;
+    if (!source) return;
+    const raw = await source.list(roundIndex);
+    get().setTrackManifest(parseTrackManifest(raw));
+  },
+
+  activeTrack: () => selectTrack(get().trackIndex, get().activeView),
 }));
