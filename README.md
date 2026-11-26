@@ -65,15 +65,15 @@ G1–G4 的命令属于规划中的二进制，当前尚未存在（见「已知
 | `DECISIONS.md` | 追加式决策日志：采纳方案、否决方案、理由、复审条件 |
 | `TASKS.md` | 任务队列与待裁决台账，按功能面分组 |
 | `MANIFEST.md` | 第三方二进制、源码与逆向对象的来源登记（URL + SHA256 + 用途 + 许可结论） |
-| `docs/` | 工程规范全文（`engineering-standards.md`）、第三方许可边界（`third-party-notices.md`）与 `replay.json` 字段对照草案（`replay-json-fields.md`） |
+| `docs/` | 工程规范全文（`engineering-standards.md`）、第三方许可边界（`third-party-notices.md`）、`replay.json` 字段对照草案（`replay-json-fields.md`）与录像轨清单契约（`video-track-manifest.md`） |
 | `scripts/` | 全部可执行逻辑：`verify.ps1`、`build.ps1`、`cold-start.ps1`、`hooks/*.ps1`、后续的 `pre-release.ps1` |
 | `config/` | 工具配置：Markdown 校验、链接检查、提交信息规则 |
 | `.github/` | CI：每次推送与 PR 运行 `verify` |
 | `.husky/` | 提交门禁薄壳（仅转发到 `scripts/hooks/*.ps1`） |
-| `crates/` | Rust 侧共享库与二进制：`tacticdeck-probe`（demo → `replay.json`，T-01）、后续的同步算法与录制编排 |
+| `crates/` | Rust 侧共享库与二进制：`tacticdeck-probe`（demo → `replay.json`，T-01）、`tacticdeck-sync`（播放时钟，T-06）、`tacticdeck-record`（录制编排骨架，T-09 / T-10 / T-16） |
 | `src/` | 前端源码：`App.tsx`、`components/`、`store/`、`styles.scss` |
 | `src-tauri/` | Tauri 2 壳：`src/lib.rs` 命令层、`tauri.conf.json`、`capabilities/` |
-| `Cargo.toml` / `Cargo.lock` | 根 workspace：成员 `src-tauri` 与 `crates/tacticdeck-{probe,map,sync,annotate}`，锁文件随根目录走 |
+| `Cargo.toml` / `Cargo.lock` | 根 workspace：成员 `src-tauri` 与 `crates/tacticdeck-{probe,map,sync,annotate,record}`，锁文件随根目录走 |
 
 ## 安装与运行
 
@@ -144,7 +144,7 @@ demo 库目录（按优先级）：环境变量 `TACTICDECK_DEMO_DIR` → `文�
 - **图形局限**：只支持 SDR；不支持旋转屏；独占全屏可能抓不到；多实例需自行加锁。
 - **素材**：demo 与 POV 录制品版权归原权利人，只存本地、不上传；`.dem` / 视频 / `.glb` 已在 `.gitignore` 排除。
 - **资产**：地图盘面等游戏资源版权归 Valve，本项目不分发，运行时从本机 CS2 只读提取。
-- **未验证**：S4 录制流水线尚未在任何真实回合上跑过；多路同步算法的漂移方程只有设计值，没有实测数据。
+- **未验证**：S4 录制流水线尚未在任何真实回合上跑过，当前只有编排层与假清单驱动的交接自检；多路同步算法的漂移方程只有设计值，没有实测数据。
 - **CI 口径**：CI 覆盖每次推送与 PR 的最新提交，**采用顶端提交验证**，未逐提交验证历史。
 
 ## 合规边界
@@ -160,9 +160,9 @@ demo 库目录（按优先级）：环境变量 `TACTICDECK_DEMO_DIR` → `文�
 | **S-0** | 技术栈骨架 | Tauri 2 壳 + React 19 前端 + Pixi 画布占位 | 完成（2026-11-16） |
 | **S0** | 解析 + 地图校准 | `dem → replay.json` CLI | 进行中（T-01 完成，T-02 / T-03 未开始） |
 | **S1** | 2D 画布 | 可拖拽 2D 回放页 | 进行中（T-04 / T-05 / T-13 / T-14 / T-15 完成） |
-| **S2** | 视频条 + 同步 | 视频 / 2D 同屏 | 未开始 |
+| **S2** | 视频条 + 同步 | 视频 / 2D 同屏 | 进行中（T-07 视频条完成，假清单驱动；真实媒体依赖 Q-01 / Q-06，按 tick 对齐待接入） |
 | **S3** | 标注 + 手册 | 标注层、本地手册 | 未开始 |
-| **S4** | 批量录制 | `record-round` 子命令 | 未开始 |
+| **S4** | 批量录制 | `record-round` 子命令 | 进行中（T-09 / T-10 / T-16 编排层就绪，实测待采集器落地：Q-01 未决） |
 | **S5** | 打包分发 | Windows 安装包 | 完成（T-12：NSIS 安装包 + 冷启动计时脚本） |
 | **M2** | 可选增强 | 3D 视图、分享、道具反查 | 未开始 |
 
