@@ -108,12 +108,14 @@ Invoke-Step 'layout/root-whitelist' {
     $allowed = @(
         'README.md', 'AGENTS.md', 'DECISIONS.md', 'TASKS.md', 'MANIFEST.md',
         'LICENSE', 'CHANGELOG.md', 'CONTRIBUTING.md', 'SECURITY.md', 'NOTICE',
-        'package.json', 'deno.json', 'deno.lock',
-        '.gitignore', '.gitattributes', '.editorconfig', '.npmrc', '.deno-version', '.env.example',
+        'package.json', 'bun.lock', '.bun-version',
+        'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml',
+        '.gitignore', '.gitattributes', '.editorconfig', '.npmrc', '.env.example',
         'commitlint.config.mjs', 'tsconfig.json', 'eslint.config.mjs', 'vitest.config.mjs', 'playwright.config.mjs',
         '.github', '.husky', '.vscode', 'CODEOWNERS',
         'index.html', 'vite.config.ts', 'tsconfig.json', 'sass.config.json',
         'src', 'src-tauri',
+        'tests',
         'docs', 'scripts', 'config', 'crates', 'apps'
     )
     $extra = @($top | Where-Object { $_ -notin $allowed })
@@ -143,8 +145,8 @@ Invoke-Step 'docs/format' {
 # ---------------------------------------------------------------- 7. 文档 lint
 Invoke-Step 'docs/lint' {
     $entry = Join-Path $repo 'node_modules/markdownlint-cli2/markdownlint-cli2.mjs'
-    if (-not (Test-Path -LiteralPath $entry)) { Fail '未安装 markdownlint-cli2（先运行 deno install）' }
-    & deno run -A $entry --config (Join-Path $repo 'config/markdownlint-cli2.jsonc') 'README.md' 'AGENTS.md' 'DECISIONS.md' 'TASKS.md' 'MANIFEST.md' 'docs/*.md'
+    if (-not (Test-Path -LiteralPath $entry)) { Fail '未安装 markdownlint-cli2（先运行 bun install）' }
+    & bun $entry --config (Join-Path $repo 'config/markdownlint-cli2.jsonc') 'README.md' 'AGENTS.md' 'DECISIONS.md' 'TASKS.md' 'MANIFEST.md' 'docs/*.md'
     if ($LASTEXITCODE -ne 0) { Fail "markdownlint-cli2 退出码 $LASTEXITCODE" }
     '零告警'
 }
@@ -152,9 +154,9 @@ Invoke-Step 'docs/lint' {
 # ---------------------------------------------------------------- 8. 内部链接与锚点
 Invoke-Step 'docs/links-internal' {
     $entry = Join-Path $repo 'node_modules/remark-cli/cli.js'
-    if (-not (Test-Path -LiteralPath $entry)) { Fail '未安装 remark-cli（先运行 deno install）' }
+    if (-not (Test-Path -LiteralPath $entry)) { Fail '未安装 remark-cli（先运行 bun install）' }
     $targets = @('README.md', 'AGENTS.md', 'DECISIONS.md', 'TASKS.md', 'MANIFEST.md', 'docs/engineering-standards.md', 'docs/third-party-notices.md')
-    $out = & deno run -A $entry --frail --quiet --use remark-validate-links @targets 2>&1
+    $out = & bun $entry --frail --quiet --use remark-validate-links @targets 2>&1
     $text = ($out | Out-String).Trim()
     # remark-cli 在部分环境下即使有 warning 也返回 0，因此以输出内容为准
     if ($LASTEXITCODE -ne 0 -or $text -match 'missing-heading|Cannot find|missing-file') {
@@ -167,8 +169,8 @@ Invoke-Step 'docs/links-internal' {
 if (-not $NoExternal) {
     Invoke-Step 'docs/links-external' {
         $entry = Join-Path $repo 'node_modules/markdown-link-check/markdown-link-check'
-        if (-not (Test-Path -LiteralPath $entry)) { Fail '未安装 markdown-link-check（先运行 deno install）' }
-        & deno run -A $entry --config (Join-Path $repo 'config/markdown-link-check.json') 'README.md' 'docs/third-party-notices.md'
+        if (-not (Test-Path -LiteralPath $entry)) { Fail '未安装 markdown-link-check（先运行 bun install）' }
+        & bun $entry --config (Join-Path $repo 'config/markdown-link-check.json') 'README.md' 'docs/third-party-notices.md'
         if ($LASTEXITCODE -ne 0) { Fail "markdown-link-check 退出码 $LASTEXITCODE" }
         '外链可达'
     }
@@ -183,7 +185,7 @@ if (-not $NoDocCommands) {
         if ($blocks.Count -eq 0) { Fail 'README 无 powershell 代码块' }
         foreach ($b in $blocks) {
             $cmd = $b.Groups[1].Value.Trim()
-            if ($cmd -match 'deno task verify') { continue }   # 递归入口，由外层 verify 自身保证
+            if ($cmd -match 'bun run verify') { continue }   # 递归入口，由外层 verify 自身保证
             Push-Location -LiteralPath $repo
             try {
                 $out = & pwsh -NoLogo -NoProfile -Command $cmd 2>&1
@@ -206,39 +208,55 @@ Invoke-Step 'version/semver' {
     "版本 $v"
 }
 
-# ---------------------------------------------------------------- 11b. Deno 版本
-Invoke-Step 'toolchain/deno' {
-    $pin = Join-Path $repo '.deno-version'
-    if (-not (Test-Path -LiteralPath $pin)) { Fail '缺少 .deno-version' }
+# ---------------------------------------------------------------- 11b. Bun 版本
+Invoke-Step 'toolchain/bun' {
+    $pin = Join-Path $repo '.bun-version'
+    if (-not (Test-Path -LiteralPath $pin)) { Fail '缺少 .bun-version' }
     $want = (Get-Content -LiteralPath $pin -Raw).Trim()
-    $deno = Get-Command deno -ErrorAction SilentlyContinue
-    if (-not $deno) { Fail 'PATH 中找不到 deno' }
-    $line = (& deno --version 2>$null | Select-Object -First 1)
-    if (-not $line) { Fail 'deno --version 无输出' }
-    $got = ($line -split '\s+')[1]
-    $gotBase = ($got -split '\+')[0]
-    if ($gotBase -ne $want) {
-        Fail "Deno 版本不符：.deno-version=$want，实际=$gotBase（$($deno.Source)）"
+    $bun = Get-Command bun -ErrorAction SilentlyContinue
+    if (-not $bun) { Fail 'PATH 中找不到 bun' }
+    $got = ((& bun --version 2>$null | Select-Object -First 1) + '').Trim()
+    if (-not $got) { Fail 'bun --version 无输出' }
+    if ($got -ne $want) {
+        Fail "Bun 版本不符：.bun-version=$want，实际=$got（$($bun.Source)）"
     }
-    "Deno $got，与 .deno-version 一致（$($deno.Source)）"
+    "Bun $got，与 .bun-version 一致（$($bun.Source)）"
 }
 
 # ---------------------------------------------------------------- 12. Rust
 $cargoManifest = Join-Path $repo 'src-tauri/Cargo.toml'
+$workspaceManifest = Join-Path $repo 'Cargo.toml'
 $hasCargo = Test-Path -LiteralPath $cargoManifest
+# 根目录有 workspace 时统一按工作区校验，否则退回单包；cargo fmt 不认 --workspace
+$inWorkspace = Test-Path -LiteralPath $workspaceManifest
 if ($hasCargo -and -not $NoCargo) {
     Invoke-Step 'rust/fmt' {
-        & cargo fmt --manifest-path $cargoManifest --all -- --check
+        if ($inWorkspace) {
+            & cargo fmt --all -- --check
+        }
+        else {
+            & cargo fmt --manifest-path $cargoManifest --all -- --check
+        }
         if ($LASTEXITCODE -ne 0) { Fail "cargo fmt 退出码 $LASTEXITCODE" }
         '格式一致'
     }
     Invoke-Step 'rust/clippy' {
-        & cargo clippy --manifest-path $cargoManifest --all-targets -- -D warnings
+        if ($inWorkspace) {
+            & cargo clippy --workspace --all-targets -- -D warnings
+        }
+        else {
+            & cargo clippy --manifest-path $cargoManifest --all-targets -- -D warnings
+        }
         if ($LASTEXITCODE -ne 0) { Fail "cargo clippy 退出码 $LASTEXITCODE" }
         '零警告'
     }
     Invoke-Step 'rust/test' {
-        & cargo test --manifest-path $cargoManifest --all
+        if ($inWorkspace) {
+            & cargo test --workspace --all
+        }
+        else {
+            & cargo test --manifest-path $cargoManifest --all
+        }
         if ($LASTEXITCODE -ne 0) { Fail "cargo test 退出码 $LASTEXITCODE" }
         '全部通过'
     }
@@ -257,5 +275,5 @@ if ($script:Failures.Count -gt 0) {
     $script:Failures | ForEach-Object { Write-Host "  - $_" }
     exit 1
 }
-Write-Host 'PASS  全部检查通过（唯一验收入口 deno task verify）'
+Write-Host 'PASS  全部检查通过（唯一验收入口 bun run verify）'
 exit 0

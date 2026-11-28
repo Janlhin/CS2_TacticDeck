@@ -11,15 +11,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup Deno
-        uses: denoland/setup-deno@v2
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          deno-version-file: .deno-version
+          bun-version-file: .bun-version
 
       - name: Install
-        run: deno install --frozen
+        run: bun install --frozen-lockfile
         shell: pwsh
 
       - name: Verify
-        run: deno task verify
+        run: bun run verify
         shell: pwsh

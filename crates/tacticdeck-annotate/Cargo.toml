@@ -1,0 +1,11 @@
+[package]
+name = "tacticdeck-annotate"
+version = "0.1.0"
+edition = "2024"
+license = "AGPL-3.0-or-later"
+description = "CS2 战术复盘工作台的标注模型：命令数组、撤销栈与本地手册存储"
+
+[dependencies]
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
