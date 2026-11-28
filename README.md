@@ -218,3 +218,12 @@ demo 库目录（按优先级）：环境变量 `TACTICDECK_DEMO_DIR` → `文�
 选择 copyleft 的目的很明确：**不允许把本项目改成闭源商业产品**。分发衍生作品、或通过网络向用户提供其功能，都必须以 AGPL 提供完整对应源码；内部自用、二次开发、自行构建均不受限制。
 
 历史版本（截至提交 `4d97624`）曾以 MIT 发布，那部分授权对已获得副本的人不可撤回，已在 [NOTICE](NOTICE) 中说明。第三方组件的许可与边界见 [docs/third-party-notices.md](docs/third-party-notices.md)。
+
+## 文档与治理
+
+![verify](https://github.com/Janlhin/CS2_TacticDeck/actions/workflows/verify.yml/badge.svg)
+
+- [贡献指南](CONTRIBUTING.md)：环境要求、上手步骤、提交前检查与 PR 规范
+- [安全策略](SECURITY.md)：威胁范围、私密报告渠道与已知缺口
+- [变更记录](CHANGELOG.md)：各版本显著变更
+- [文档索引](docs/README.md)：仓库文档与源码入口地图
