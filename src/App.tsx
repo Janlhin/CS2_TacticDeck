@@ -4,6 +4,7 @@ import { HeatPanel } from './components/HeatPanel.tsx';
 import { ReplayBoard } from './components/ReplayBoard.tsx';
 import { RosterPanel } from './components/RosterPanel.tsx';
 import { Timeline } from './components/Timeline.tsx';
+import { VideoBar } from './components/VideoBar.tsx';
 import { buildSampleReplay } from './replay/fixture.ts';
 import {
   entryLabel,
@@ -46,6 +47,8 @@ export default function App() {
   const advance = useAppStore((state) => state.advance);
   const togglePlay = useAppStore((state) => state.togglePlay);
   const setSpeed = useAppStore((state) => state.setSpeed);
+  const trackManifest = useAppStore((state) => state.trackManifest);
+  const trackIndex = useAppStore((state) => state.trackIndex);
 
   const [info, setInfo] = useState<AppInfo>(BUILD_INFO);
   const [bridge, setBridge] = useState<'pending' | 'ok' | 'browser'>('pending');
@@ -226,12 +229,7 @@ export default function App() {
               <ReplayBoard replay={replay} tick={tick} focusSlot={0} />
             ) : (
               <div className="viewport-split">
-                <div className="viewport-placeholder">
-                  <span className="viewport-placeholder-title">{current?.label} POV 视频未接入</span>
-                  <span className="viewport-placeholder-sub">
-                    录制完成后按 tick 对齐播放；当前只在右栏与板面看到该选手点位。
-                  </span>
-                </div>
+                <VideoBar manifest={trackManifest} index={trackIndex} activeSlot={focusSlot} onSelect={setActiveView} />
                 <ReplayBoard replay={replay} tick={tick} focusSlot={focusSlot} />
               </div>
             )}

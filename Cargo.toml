@@ -5,6 +5,7 @@ members = [
     "crates/tacticdeck-map",
     "crates/tacticdeck-sync",
     "crates/tacticdeck-annotate",
+    "crates/tacticdeck-record",
 ]
 resolver = "3"
 

@@ -70,7 +70,7 @@
 | 编号 | 目标 | 完成判据（命令 → 退出码） | 状态 | 创建时间 | 完成时间 |
 |---|---|---|---|---|---|
 | T-06 | `TickClock`：主时钟 + 漂移回归 + `playbackRate` 校正 | `cargo test -p tacticdeck-sync` → 0（含 3 分钟模拟漂移 < 100 ms） | 完成 | 2026-11-16 | 2026-11-17 |
-| T-07 | 视频条：N 路封面 + 懒加载 + 点击切主 | 交互冒烟：切主 < 1 s 断言通过 | 未开始 | 2026-11-16 | — |
+| T-07 | 视频条：N 路封面 + 懒加载 + 点击切主 | `bun run test:web` → 0（video-bar 用例：清单校验、区间懒渲染、只挂 1 路视频、100 次切主最大 0.012 ms）；真实媒体未接入，见「T-07 实测口径」 | 完成 | 2026-11-16 | 2026-11-27 |
 
 ## S3 标注与手册
 
@@ -82,10 +82,26 @@
 
 | 编号 | 目标 | 完成判据（命令 → 退出码） | 状态 | 创建时间 | 完成时间 |
 |---|---|---|---|---|---|
-| T-09 | LiteReplay 改造四项（IPC / 窗口裁剪 / 输出命名 / tick 元数据） | `cargo run -p tacticdeck-record -- --self-test` → 0 | 未开始 | 2026-11-16 | — |
-| T-10 | 编排器 `record-round`：多遍采集——同一 tick 区间重放 N 遍，每遍用 `spec_mode` + `spec_player` 锁定一名选手，输出 N 轨视频 + tick 元数据；N 可配 1–10 | 一个真实回合产出 N 路视频，首帧同 tick（±2）→ 0 | 未开始 | 2026-11-16 | — |
+| T-09 | LiteReplay 改造四项（IPC / 窗口裁剪 / 输出命名 / tick 元数据） | `cargo run -p tacticdeck-record -- --self-test` → 0（已验：输出命名、tick 元数据 schema、采集器占位；**差 IPC 与窗口裁剪**，属真实采集，待 Q-01 裁决） | 进行中 | 2026-11-16 | — |
+| T-10 | 编排器 `record-round`：多遍采集——同一 tick 区间重放 N 遍，每遍用 `spec_mode` + `spec_player` 锁定一名选手，输出 N 轨视频 + tick 元数据；N 可配 1–10 | 编排逻辑：`cargo test -p tacticdeck-record` → 0（N 遍任务列表、首帧 ±2 不变量、N 1–10 边界）；实测判据「一个真实回合产出 N 路视频，首帧同 tick（±2）」**未执行**，待采集器落地 | 进行中 | 2026-11-16 | — |
 | T-11 | 版本适配回归（tick 96 / seek 顺序 / 暂停 4 tick） | `pwsh -File scripts/regress-record.ps1` → 0 | 未开始 | 2026-11-16 | — |
-| T-16 | 录制完成后自动切 2D 回放：录制结束 → 解析 → 进入十人回放并停在首回合首 tick | `pwsh -File scripts/regress-record.ps1 -Mode handoff` → 0（3 s 内进入回放，tick 对齐 ±2） | 未开始 | 2026-11-16 | — |
+| T-16 | 录制完成后自动切 2D 回放：录制结束 → 解析 → 进入十人回放并停在首回合首 tick | `pwsh -File scripts/regress-record.ps1 -Mode handoff` → 0（假清单 + 假解析：虚拟 12 ms 进入、tick 差 0）；判据只覆盖编排层，真实交接待采集器落地 | 进行中 | 2026-11-16 | — |
+
+### T-07 实测口径（2026-11-27，假清单驱动）
+
+- `bun run test:web` → 0：37 passed / 2 skip（`tests/video-bar.test.ts` 12 条）。
+- 切主耗时用 `performance.now()` 夹住「`selectTrack` + `setActiveView` + `activeTrack()`」，重复 100 次，**实测最大 0.012 ms**（假清单，常数级查表）。
+- 懒加载是区间渲染：`visibleCoverRange` + `sliceTracksByRange`，区间外封面不挂 DOM；视频只挂主轨一路。
+- **未接入真实媒体**：清单里 `cover` / `video` 都是占位字符串，仓库无真实封面与录像；解码、播放、按 tick 对齐均未验证，真实素材依赖 Q-01 / Q-06。
+
+### S4 编排层实测记录（2026-11-27，假清单 + 假解析驱动）
+
+- `cargo run -p tacticdeck-record -- --self-test` → 0：19 项编排 / 元数据检查 + 6 项交接检查全部 PASS（示例：N=3、区间 [96, 320]、slots=[1, 5, 10]；元数据 schema v1 往返一致；N=0 / N=11 / slot 越界 / 起点早于 96 / 终点反序均被拒）。
+- `cargo test -p tacticdeck-record` → 0：31 passed（含 handoff 7 条）。
+- `pwsh -NoLogo -NoProfile -File scripts/regress-record.ps1 -Mode handoff` → 0：首行打印 `[FAKE]` 横幅；正常路径虚拟耗时 12 ms、tick 差 0、停在 tick 96（回合 0）。
+- `pwsh -NoLogo -NoProfile -File scripts/regress-record.ps1`（默认 live）→ **1**（刻意）：采集器未实现，`record-round` 无可执行实现；T-11 不得被假路径凑绿。
+- 只停在接口层（Q-01 未决）：真实抓屏与编码落盘、HLAE 命令下发与切人重试、窗口裁剪与分辨率一致性、IPC 通道、真实首尾 tick 回填、真实 `replay.json` 解析器，全部是 trait / 占位。
+- Q-06 未决：交接状态机对 9 人（单人 POV）直接判 `Failed`，降级策略未自行裁决。
 
 ## S5 打包
 

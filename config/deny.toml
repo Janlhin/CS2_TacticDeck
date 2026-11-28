@@ -37,5 +37,6 @@ exceptions = [
     { crate = "tacticdeck-annotate", allow = ["AGPL-3.0-or-later"] },
     { crate = "tacticdeck-map", allow = ["AGPL-3.0-or-later"] },
     { crate = "tacticdeck-probe", allow = ["AGPL-3.0-or-later"] },
+    { crate = "tacticdeck-record", allow = ["AGPL-3.0-or-later"] },
     { crate = "tacticdeck-sync", allow = ["AGPL-3.0-or-later"] },
 ]

@@ -3621,6 +3621,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tacticdeck-record"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "tacticdeck-sync"
 version = "0.1.0"
 
