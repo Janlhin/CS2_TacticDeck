@@ -3,7 +3,7 @@ name = "cs2-tacticdeck"
 version = "0.1.0"
 edition = "2024"
 description = "本地优先的 CS2 多 POV 战术复盘工作台"
-license = "MIT"
+license.workspace = true
 rust-version = "1.90"
 
 [lib]

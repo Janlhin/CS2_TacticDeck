@@ -65,8 +65,8 @@ G1–G4 的命令属于规划中的二进制，当前尚未存在（见「已知
 | `DECISIONS.md` | 追加式决策日志：采纳方案、否决方案、理由、复审条件 |
 | `TASKS.md` | 任务队列与待裁决台账，按功能面分组 |
 | `MANIFEST.md` | 第三方二进制、源码与逆向对象的来源登记（URL + SHA256 + 用途 + 许可结论） |
-| `docs/` | 工程规范全文（`engineering-standards.md`）与第三方许可边界（`third-party-notices.md`） |
-| `scripts/` | 全部可执行逻辑：`verify.ps1`、`hooks/*.ps1`、后续的 `pre-release.ps1` |
+| `docs/` | 工程规范全文（`engineering-standards.md`）、第三方许可边界（`third-party-notices.md`）与 `replay.json` 字段对照草案（`replay-json-fields.md`） |
+| `scripts/` | 全部可执行逻辑：`verify.ps1`、`build.ps1`、`cold-start.ps1`、`hooks/*.ps1`、后续的 `pre-release.ps1` |
 | `config/` | 工具配置：Markdown 校验、链接检查、提交信息规则 |
 | `.github/` | CI：每次推送与 PR 运行 `verify` |
 | `.husky/` | 提交门禁薄壳（仅转发到 `scripts/hooks/*.ps1`） |
@@ -125,7 +125,9 @@ bun run test:web
 
 本机雷达底图实测（`--extract-radar de_mirage`）：VTEX 1024×1024、format 28（RGBA8888，4 字节/像素）、单 mip、LZ4 压缩，解出 4,194,304 字节像素，写成 271,686 字节 PNG；盘面与十人点位在窗口内对齐。
 
-起窗口：`bun run app:dev`（需要 WebView2 运行时，Win10/11 默认自带）；只调前端样式可先跑 `bun run dev` 在浏览器里看。打包：`bun run app:build`（当前 `bundle.active` 为 `false`，只产出可执行文件，不做安装包）。
+起窗口：`bun run app:dev`（需要 WebView2 运行时，Win10/11 默认自带）；只调前端样式可先跑 `bun run dev` 在浏览器里看。打包：`bun run app:build` 先构建 release 可执行文件，再用 NSIS 产出 Windows 安装包；安装包落在 `cargo metadata` 推导的 `target_directory` 下的 `release/bundle/nsis/`，文件名形如 `CS2 TacticDeck_<版本>_x64-setup.exe`，具体路径与体积以 `tauri build` 结尾打印为准。
+
+冷启动：`bun run app:cold-start`（转发到 `scripts/cold-start.ps1`），对打包出来的同一个 release 可执行文件连测 3 轮：每轮先确保同名进程未在运行，再 `Start-Process` 拉起，轮询到主窗口出现后记录毫秒；任一轮 ≥ 3000 ms 或超时即失败退出。参数可用 `-ThresholdMs` / `-Runs` / `-TimeoutMs` / `-Exe` 覆盖，缺省 exe 路径同样由 `cargo metadata` 的 `target_directory` 推导。本次实测（2026-11-27，本机 release 产物）：1223 / 197 / 203 ms，最大值 1223 ms，阈值 3000 ms。冷启动口径：被测进程未预先运行、首次拉起，统计「进程启动 → 主窗口出现」的耗时；不做预热，也不取最快的一轮。
 
 demo 库目录（按优先级）：环境变量 `TACTICDECK_DEMO_DIR` → `文档/CS2_TacticDeck/demos` → 仓库根目录。前两处放 `replay.json` 即被扫描到；`.dem` 会列出来但标记「待导出」，先用 probe 导出成 `replay.json` 再点载入。窗口启动时自动载入库里第一条可用的回放，没有才退回内置合成样本。
 
@@ -136,6 +138,8 @@ demo 库目录（按优先级）：环境变量 `TACTICDECK_DEMO_DIR` → `文�
 - **只有 Mirage 有真记录验证**：坐标校准用 de_mirage 的真实 demo 跑通（65750 个采样点 99.6% 落在雷达图可走区域），其余地图的 `pos/scale` 能抽出来但还没有 demo 复核。
 
 - **平台**：只支持 Windows x64（抓屏依赖 DXGI）。
+- **安装包未签名**：NSIS 安装包未做代码签名，在别的机器上首次运行可能触发 SmartScreen 或「未知发布者」提示，目前需手动选择「仍要运行」。
+- **冷启动口径**：冷启动脚本测的是 release 产物「进程未预运行 → 主窗口出现」的耗时；本机无管理员权限，不强制清空系统文件缓存，数值接近本机二次以后的冷启动，与真正的开机首启（文件缓存全冷）存在差异；结果还受机器负载与 WebView2 预热状态影响，不作为跨机器对比基准。
 - **录制依赖外部工具**：HLAE 官方声明其为"技术意义上的 hack"，仅可用于看 demo 与制作视频。本项目只在离线 demo 模式调用，**绝不接入受 VAC 保护的服务器**。
 - **图形局限**：只支持 SDR；不支持旋转屏；独占全屏可能抓不到；多实例需自行加锁。
 - **素材**：demo 与 POV 录制品版权归原权利人，只存本地、不上传；`.dem` / 视频 / `.glb` 已在 `.gitignore` 排除。
@@ -159,7 +163,7 @@ demo 库目录（按优先级）：环境变量 `TACTICDECK_DEMO_DIR` → `文�
 | **S2** | 视频条 + 同步 | 视频 / 2D 同屏 | 未开始 |
 | **S3** | 标注 + 手册 | 标注层、本地手册 | 未开始 |
 | **S4** | 批量录制 | `record-round` 子命令 | 未开始 |
-| **S5** | 打包分发 | Windows 安装包 | 未开始 |
+| **S5** | 打包分发 | Windows 安装包 | 完成（T-12：NSIS 安装包 + 冷启动计时脚本） |
 | **M2** | 可选增强 | 3D 视图、分享、道具反查 | 未开始 |
 
 止损设计：S0–S3 不依赖录制，可用离线素材独立验证；S4 若被引擎行为卡住，前三阶段仍可交付。

@@ -24,6 +24,7 @@
 | `TypeScript` | github.com/microsoft/TypeScript | Apache-2.0 | 语言 | — |
 | `Zustand` | github.com/pmndrs/zustand | MIT | 状态管理 | — |
 | `FFmpeg` | ffmpeg.org | LGPL 2.1+（默认构建） | 编码 / 封装 | **仅启用 nvenc / amf / mf + aac**；启用 GPL 组件会使整个产品转为 GPL，禁止 |
+| `cargo-deny` | crates.io（github.com/EmbarkStudios/cargo-deny） | MIT OR Apache-2.0 | 构建 / CI 期 Rust 依赖许可扫描 | 仅工具链，不进入运行时；版本锁定 0.22.1，配置见 `config/deny.toml` |
 
 ## 2. 仅作参考，不复制代码
 
@@ -47,12 +48,19 @@
 ## 4. 风险提示
 
 - **HLAE 与 VAC**：HLAE 官方声明其为"技术意义上的 hack"，加入受 VAC 保护的服务器大概率被封。本项目只在离线 demo 模式调用，并在 UI 中显著提示。
-- **许可证传染**：新增任何依赖前先查许可证；CI 计划引入 `cargo deny` 与 npm 依赖许可检查（见 `TASKS.md` W-06）。
+- **许可证传染**：新增任何依赖前先查许可证。Rust 侧已接入 `cargo deny`（0.22.1，配置 `config/deny.toml`；本地验收与 CI 均执行 `cargo deny --config config/deny.toml check licenses`）。判定口径：allow 列表只收录依赖图中实际出现的宽松许可，列入却未被任何 crate 使用的许可直接判失败；copyleft（AGPL）不进全局 allow，仅按包名对本仓库自有 crate 经 exceptions 授权，第三方依赖出现 AGPL/GPL 系列一律拒绝。npm 依赖许可检查尚未接入，留待后续任务。
 - **更正机制**：若发现本项目使用了某组件却未在此登记，或对许可状态的判断有误，请开 issue，我们会修正并更新本文件。
 
 ## 5. 与本项目 AGPL-3.0-or-later 的兼容性
 
 - **宽松许可依赖可并入 AGPL**：MIT / ISC / BSD / Apache-2.0 / MPL-2.0 / BlueOak 等均可作为组件进入 AGPL 作品，只需保留各自的版权与许可声明。已对 511 个已安装依赖做过许可分布核对，无 GPL 系列。
+- **`config/deny.toml` allow 清单逐项口径**：以下 13 个 SPDX 标识均为可并入 AGPL 作品的宽松、公有领域式或文件级弱 copyleft 许可，逐一定性如下：
+  - `MIT` / `ISC` / `BSD-3-Clause`：经典宽松版权许可，保留版权与许可声明即可随组件并入。
+  - `Apache-2.0` / `Apache-2.0 WITH LLVM-exception`：宽松许可并含专利授权；后者是 LLVM 例外变体，放宽了链接场景限制。
+  - `0BSD` / `MIT-0` / `CC0-1.0` / `Unlicense`：公有领域式放弃或近乎无限制——0BSD 无署名要求；MIT-0 不保留署名；CC0-1.0 与 Unlicense 由作者放弃版权。
+  - `Zlib` / `Unicode-3.0`：宽松许可，允许使用、修改与再分发，仅需保留许可声明且不得冒用作者名义。
+  - `MPL-2.0`：文件级弱 copyleft——被修改的 MPL 文件须继续以 MPL 发布，但可与 AGPL 作品组合链接成单一作品。
+  - `CDLA-Permissive-2.0`：宽松数据许可（非代码许可），本项目仅 `webpki-roots` 根证书包使用，允许使用与再分发，无 copyleft 传染。
 - **GPLv3 可组合**：依 AGPL 第 13 条，可与 GPLv3 作品链接成单一作品（组合后整体按 AGPL 分发）；**GPLv2-only 不可**，引入前必须确认是 "or later"。
 - **FFmpeg（LGPL 2.1+）不内嵌**：本项目只把 FFmpeg 作为**独立进程调用**，不链接、不随包分发二进制，因此不构成 LGPL 与 AGPL 的直接组合。若将来改为随包分发 FFmpeg 二进制，必须重新评估（LGPL 2.1 无法一键升级到 AGPL），并记入 `DECISIONS.md`。
 - **不得引入的许可**：GPLv2-only、SSPL、以及任何禁止商用的条款（如 CC-BY-NC），与 AGPL 目标冲突或无法满足。

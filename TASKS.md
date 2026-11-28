@@ -15,7 +15,7 @@
 | W-03 | CI 每次推送与 PR 运行 verify | GitHub Actions 上 `verify` 步骤绿色（`gh run list` 首条 `conclusion=success`）→ 已验（run `43864689689`） | 完成 | 2026-11-16 | 2026-11-16 |
 | W-04 | 提交门禁（commitlint + 钩子转发） | 故意提交 `tmp: bad message` → 非 0；合法 `docs: x` → 0 | 完成 | 2026-11-16 | 2026-11-16 |
 | W-05 | 脚本基线清零（`.cmd` / `.bat` 计数 = 0） | `git ls-files '*.cmd' '*.bat'` 空输出 → 0 | 完成 | 2026-11-16 | 2026-11-16 |
-| W-06 | 许可扫描接入 CI（`cargo deny` / 依赖许可检查） | `cargo deny check licenses` → 0（在首个 `Cargo.toml` 落地后启用） | 未开始 | 2026-11-16 | — |
+| W-06 | 许可扫描接入 CI（`cargo deny` / 依赖许可检查） | `cargo deny --config config/deny.toml check licenses` → 0（cargo-deny 0.22.1 的 `--config` 是顶层选项，须前置；allow 多列未用许可或 exceptions 多列未用包即退出码 4） | 完成 | 2026-11-16 | 2026-11-27 |
 | W-07 | 技术栈骨架：Tauri 2 壳 + React 19 前端 + Pixi 画布占位 | `bun run verify` → 0（含 rust 的 fmt / clippy / test 三段）；`vite build` → 0 | 完成 | 2026-11-16 | 2026-11-16 |
 | W-08 | 前端工具链由 Deno 2.9.8 切到 Bun 1.4.4（Deno 官方 2026-10-09 宣布一年后停止运行时开发） | `bun run verify` → 0；`bun run test:web` → 0；`bun run build:web` → 0 | 完成 | 2026-11-18 | 2026-11-18 |
 
@@ -24,7 +24,7 @@
 | 编号 | 目标 | 完成判据（命令 → 退出码） | 状态 | 创建时间 | 完成时间 |
 |---|---|---|---|---|---|
 | R-01 | 六个参考仓库浅克隆到仓库外（`D:\Projects\_refs`），并在 `MANIFEST.md` 登记 HEAD 与许可 | 目录存在 + MANIFEST 行数与仓库数一致 → 人工核对通过 | 完成 | 2026-11-16 | 2026-11-16 |
-| R-02 | 读完 `demoparser` 的 tick 列式输出与 `awpy` 的坐标换算，落成 `replay.json` 字段草案 | 字段草案写入 `docs/`，且 T-01 可直接按草案实现 | 未开始 | 2026-11-16 | — |
+| R-02 | 读完 `demoparser` 的 tick 列式输出与 `awpy` 的坐标换算，落成 `replay.json` 字段草案 | 字段草案写入 `docs/replay-json-fields.md`，且 T-01 可直接按草案对照（已按真实 GOTV 实跑导出 + `--validate` 各退出码 0 取证） | 完成 | 2026-11-16 | 2026-11-27 |
 
 ## S0 解析与地图校准
 
@@ -91,7 +91,7 @@
 
 | 编号 | 目标 | 完成判据（命令 → 退出码） | 状态 | 创建时间 | 完成时间 |
 |---|---|---|---|---|---|
-| T-12 | Windows 安装包 + 冷启动 < 3 s | `bun run build` → 0；启动计时脚本断言通过 | 未开始 | 2026-11-16 | — |
+| T-12 | Windows 安装包 + 冷启动 < 3 s | `bun run build` → 0；`pwsh -NoLogo -NoProfile -File scripts/cold-start.ps1` → 0（每轮独立判定，全部 < 3000 ms） | 完成 | 2026-11-16 | 2026-11-27 |
 
 ---
 
@@ -106,3 +106,4 @@
 | Q-03 | 2026-11-16 | 是否把本仓库登记进 `D:\Projects\_docs\命名规范.md` 的现行条目？ | A 登记；B 暂不登记 | 未决 |
 | Q-04 | 2026-11-16 | 中文文档是否需要拼写检查（cspell）通道？ | A 接入并维护中文词典；B 暂不接入，理由记入 DECISIONS | 未决 |
 | Q-05 | 2026-11-16 | 十路 POV（五对五全录）的采集方式？ | A 分机采集：多台机器各 1–2 路，靠 `TickClock` 对齐；B 单机只录 5 路（每队选人），2D 回放补全十人；C 单实例多相机流（须先验证 HLAE `mirv_streams` 在 CS2 下可用） | 2026-11-16 **裁决 D-013**：单机、多遍、逐遍锁选手（N 可配 1–10），不并行、不依赖多机 |
+| Q-06 | 2026-11-27 | 个人 POV 录像（单观察者 `.dem`）只有 1 名 controller，`replay.json` 十人契约覆盖不了：导出退出 0 但 0 帧、`--validate` 退出 1（R-02 实测） | A 契约只支持 GOTV 十人录像，POV 在 README 明确不支持，POV 兼容另立任务；B 导出对 POV 自动降级成单人契约（须扩展 schema 与前端）；C 直接给 probe 补 POV 解析（controller 反查 + 单人槽位），并入本迭代 | 未决 |

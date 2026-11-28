@@ -20,6 +20,14 @@ jobs:
         run: bun install --frozen-lockfile
         shell: pwsh
 
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --version 0.22.1 --locked
+        shell: pwsh
+
+      - name: License scan
+        run: cargo deny --config config/deny.toml check licenses
+        shell: pwsh
+
       - name: Verify
         run: bun run verify
         shell: pwsh
