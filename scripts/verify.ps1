@@ -107,7 +107,7 @@ Invoke-Step 'layout/root-whitelist' {
     $top = $tracked | ForEach-Object { ($_ -split '/')[0] } | Sort-Object -Unique
     $allowed = @(
         'README.md', 'AGENTS.md', 'DECISIONS.md', 'TASKS.md', 'MANIFEST.md',
-        'LICENSE', 'CHANGELOG.md', 'NOTICE',
+        'LICENSE', 'CHANGELOG.md', 'CONTRIBUTING.md', 'SECURITY.md', 'NOTICE',
         'package.json', 'bun.lock', '.bun-version',
         'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml',
         '.gitignore', '.gitattributes', '.editorconfig', '.npmrc', '.env.example',
